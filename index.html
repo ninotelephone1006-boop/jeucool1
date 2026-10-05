@@ -113,7 +113,7 @@ g.T=T;if(typeof module!=='undefined')module.exports=T})(typeof window!=='undefin
 <script type="module">
 import * as THREE from 'three';
 const $=s=>document.querySelector(s),S=1.8/32,cl=(v,a,b)=>Math.min(b,Math.max(a,v)),lp=(a,b,t)=>a+(b-a)*t,PI=Math.PI;
-const cfg=Object.assign({sens:1,dist:5,vol:.8,mus:.5,sfx:.8,q:1,zoom:4,zlvl:4},JSON.parse(localStorage.cfg||'{}'));
+const cfg=Object.assign({sens:1,dist:5,vol:.8,mus:.5,sfx:.8,q:1,zoom:4,zlvl:4,hand:1,bob:1,hsz:1},JSON.parse(localStorage.cfg||'{}'));
 // ---------- scène
 const R=new THREE.WebGLRenderer({canvas:$('#c'),antialias:true});R.shadowMap.enabled=true;R.shadowMap.type=THREE.PCFSoftShadowMap;R.outputColorSpace=THREE.SRGBColorSpace;
 const sc=new THREE.Scene(),cam=new THREE.PerspectiveCamera(65,1,.1,2500);sc.fog=new THREE.Fog(0xbfe0ff,200,900);
@@ -729,7 +729,7 @@ function renderInv(){try{localStorage.inv=JSON.stringify(inv)}catch(e){}const f=
 function sclick(a,i,rt){const s=a[i];if(!cur){if(s){if(rt&&s.n>1){const h=s.n>>1;cur=cloneItem(s,h);s.n-=h}else{cur=s;a[i]=null}}}
  else if(!s){if(rt&&cur.n>1){a[i]=cloneItem(cur,1);cur.n--}else{a[i]=cur;cur=null}}
  else if(s.k===cur.k&&!s.model&&!cur.model&&!s.cid&&!cur.cid){const t=Math.min(itemDef(s)[2]-s.n,rt?1:cur.n);s.n+=t;cur.n-=t;if(!cur.n)cur=null}else{a[i]=cur;cur=s}renderInv()}
-function held(){const s=inv[sel];me.c.held.visible=!!s;if(s)me.c.held.material.color.set(itemDef(s)[3])}
+function held(){const s=inv[sel];me.c.held.visible=!!s;if(s)me.c.held.material.color.set(itemDef(s)[3]);if(vmReady)vmWant()}
 $('#inv').onmousedown=e=>{if(e.target.closest('.slot'))return;if(cur){throwItem(cur);cur=null;renderInv()}};
 document.addEventListener('mousedown',e=>{if(!invOpen||!cur||e.target.closest('#inv'))return;throwItem(cur);cur=null;renderInv()},true);
 onmousemove=e=>{$('#cur').style.left=e.clientX+8+'px';$('#cur').style.top=e.clientY+8+'px'};renderInv();
@@ -993,7 +993,8 @@ $('#bSkin').onclick=()=>$('#fSkin').click();
 function setSkin(c){myCv=c;allC.forEach(x=>x===me.c||prevs.some(p=>p.ch===x)?x.setSkin(c):0);localStorage.skin=c.toDataURL();send({t:'skin',skin:localStorage.skin})}
 $('#fSkin').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>loadSkin(r.result).then(setSkin);r.readAsDataURL(f)};
 [0,1,2].forEach(i=>{const b=document.createElement('button');b.textContent='Skin '+(i+1);b.onclick=()=>setSkin(defSkin(i));$('#presets').append(b)});
-[['sens','Sensibilité caméra',.3,3,.1],['dist','Distance caméra',2,12,.5],['zoom','Zoom maximal (maintiens C)',1.5,12,.5],['vol','Volume',0,1,.05],['mus','Musique',0,1,.05],['sfx','Effets sonores',0,1,.05]].forEach(([k,n,a,b,s])=>{const l=document.createElement('label');l.innerHTML=n+`<input type=range min=${a} max=${b} step=${s} value=${cfg[k]}>`;l.firstChild.nextSibling.oninput=e=>{cfg[k]=+e.target.value;localStorage.cfg=JSON.stringify(cfg)};$('#optl').append(l)});
+[['sens','Sensibilité caméra',.3,3,.1],['dist','Distance caméra',2,12,.5],['zoom','Zoom maximal (maintiens C)',1.5,12,.5],['vol','Volume',0,1,.05],['mus','Musique',0,1,.05],['sfx','Effets sonores',0,1,.05],['bob','Balancement de la main (1<sup>re</sup> personne)',0,2,.05],['hsz','Taille de la main (1<sup>re</sup> personne)',.6,1.5,.05]].forEach(([k,n,a,b,s])=>{const l=document.createElement('label');l.innerHTML=n+`<input type=range min=${a} max=${b} step=${s} value=${cfg[k]}>`;l.firstChild.nextSibling.oninput=e=>{cfg[k]=+e.target.value;localStorage.cfg=JSON.stringify(cfg)};$('#optl').append(l)});
+{const l=document.createElement('label');l.innerHTML='Main visible en 1<sup>re</sup> personne <select id="ohand" style="width:100%"><option value="0">Désactivée</option><option value="1">Main droite (objet tenu)</option><option value="2">Les deux mains</option></select>';$('#optl').append(l);const s=$('#ohand');s.value=String(cl(+cfg.hand||0,0,2));s.onchange=()=>{cfg.hand=+s.value;localStorage.cfg=JSON.stringify(cfg)}}
 $('#oq').value=cfg.q;$('#oq').onchange=e=>{cfg.q=+e.target.value;localStorage.cfg=JSON.stringify(cfg);quality()};
 const CMD={build:()=>{if(gm!=='creative')return log('Build : réservé au mode créatif.');build=!build;syncB();log('Mode Build '+(build?'activé':'désactivé'))},help:()=>log('/build · /time set day|noon|night|midnight|0-24000 · /gamemode creative|survival'),
 time:a=>{const M={day:1000,noon:6000,night:13000,midnight:18000,sunrise:23000,sunset:12000},v=M[a[1]]??+a[1];if(a[0]!=='set'||isNaN(v))return log('Usage : /time set day|noon|night|midnight|0-24000');send({t:'time',v});log('Heure réglée pour tout le monde.')},
@@ -1157,6 +1158,126 @@ const FL=new THREE.SpotLight(0xfff0c0,0,45,.5,.4,1),LT=new THREE.PointLight(0xff
 ticks.push(dt=>{const k=inv[sel]?.k;FL.intensity=fOn&&k==='lampe_torche'?120:0;LT.intensity=k==='lanterne'?30:0;
  if(FL.intensity){const d=new THREE.Vector3();cam.getWorldDirection(d);FL.position.copy(cam.position);FL.target.position.copy(cam.position).addScaledVector(d,10)}
  LT.position.set(me.pos.x,me.pos.y+1.8,me.pos.z);const zt=K.c&&active()?zLvl():1;zCur=lp(zCur,zt,1-Math.exp(-dt*14));if(Math.abs(zCur-zt)<.004)zCur=zt;const z=(k==='longue_vue'&&rdown&&active()?16:65)/zCur;if(Math.abs(cam.fov-z)>.05){cam.fov=lp(cam.fov,z,.35);cam.updateProjectionMatrix()}});
+// ---------- vue 1re personne : main + objet tenu (modèle et animations 100 % custom)
+// La main est construite à la main (avant-bras, paume, 4 doigts articulés, pouce) avec TON skin,
+// puis rendue dans une scène séparée, par-dessus le monde : le décor ne peut jamais la couper.
+var vmReady=0;
+const VMC={ // pose réglable (espace caméra : x = droite, y = haut, z = vers l'écran)
+ wx:.23,wy:-.17,wz:-.50,        // où se trouve le poignet
+ bx:.31,by:-.57,bz:.78,         // direction du coude (hors champ, en bas à droite)
+ arm:8,                         // longueur avant-bras (px)
+ ptx:-.30,pty:-.75,ptz:.55,     // direction visée par la paume (la main s'enroule autour de l'objet)
+ curl:.35,spread:.05,           // doigts : repli au repos + écartement
+ ix:.12,iy:-.02,iz:-.47,        // objet tenu
+ irx:-.35,iry:-.70,irz:.50,     // orientation de l'objet
+ blk:.19,flat:.23};             // taille d'un bloc / d'un objet plat
+const vmScene=new THREE.Scene(),vmCam=new THREE.PerspectiveCamera(70,1,.02,8);
+const vmHemi=new THREE.HemisphereLight(0xcfe6ff,0xdddddd,.9),vmKey=new THREE.DirectionalLight(0xfff2d8,2),
+ vmFill=new THREE.DirectionalLight(0xbfd8ff,.6),vmGlow=new THREE.PointLight(0xffb050,0,1.6,2);
+vmKey.position.set(-.6,1,.9);vmFill.position.set(1,-.35,.45);vmScene.add(vmHemi,vmKey,vmFill,vmGlow);
+const vmSkin=new THREE.MeshStandardMaterial({map:me.c.tex,roughness:.95}),
+ vmSleeve=new THREE.MeshStandardMaterial({map:me.c.tex,roughness:.95,transparent:!0,alphaTest:.5,side:THREE.DoubleSide});
+const vmBox=(w,h,d,u,v,ov)=>{const g=new THREE.BoxGeometry(w*S,h*S,d*S);uvs(g,w,h,d,u,v+(ov?16:0));return g};
+function mkVmArm(side){
+ const root=new THREE.Group(),bob=new THREE.Group(),sw=new THREE.Group(),arm=new THREE.Group(),wrist=new THREE.Group(),item=new THREE.Group();
+ root.add(bob);bob.add(sw);sw.add(arm,item);arm.add(wrist);
+ const fore=new THREE.Mesh(vmBox(4,8,4,40,20),vmSkin);fore.position.y=4*S;
+ const slv=new THREE.Mesh(vmBox(4.9,5.4,4.9,40,20,1),vmSleeve);slv.position.y=2.7*S; // manche (calque du skin)
+ arm.add(fore,slv);wrist.position.y=8*S;
+ const palm=new THREE.Mesh(vmBox(4,3.6,4,40,24),vmSkin);palm.position.y=1.8*S;wrist.add(palm);
+ const fg=[];for(let i=0;i<4;i++){const f=new THREE.Group();f.position.set((-1.5+i)*S,3.5*S,0);
+  const a=new THREE.Mesh(vmBox(1.15,2.2,1.35,44+i,26),vmSkin);a.position.y=1.1*S;
+  const j=new THREE.Group();j.position.y=2.2*S;
+  const b=new THREE.Mesh(vmBox(1.05,1.9,1.25,44+i,28),vmSkin);b.position.y=.95*S;j.add(b);
+  f.add(a,j);wrist.add(f);fg.push({f,j})}
+ const th=new THREE.Group();th.position.set(-2.05*S,1.5*S,.5*S);th.rotation.set(-.25,0,-.55);
+ const ta=new THREE.Mesh(vmBox(1.3,2.2,1.5,40,26),vmSkin);ta.position.y=1.1*S;
+ const tj=new THREE.Group();tj.position.y=2.2*S;
+ const tb=new THREE.Mesh(vmBox(1.2,1.7,1.4,40,28),vmSkin);tb.position.y=.85*S;tj.add(tb);
+ th.add(ta,tj);wrist.add(th);
+ return{root,bob,sw,arm,wrist,item,fg,th,side}}
+const vmRig=mkVmArm(1),vmOff=mkVmArm(-1);vmOff.root.scale.x=-1;vmScene.add(vmRig.root,vmOff.root);
+const _vb=new THREE.Vector3(),_vd=new THREE.Vector3(),_vq=new THREE.Quaternion(),_vr=new THREE.Quaternion(),_vu=new THREE.Vector3(0,1,0),
+ _vz=new THREE.Vector3(),_vt=new THREE.Vector3(),_vc=new THREE.Vector3(),_vp=new THREE.Vector3();
+function vmPlace(rig){_vb.set(VMC.bx,VMC.by,VMC.bz).normalize();const L=VMC.arm*S;
+ rig.sw.position.set(VMC.wx+_vb.x*L,VMC.wy+_vb.y*L,VMC.wz+_vb.z*L);
+ _vd.copy(_vb).negate();_vq.setFromUnitVectors(_vu,_vd);
+ // rotation autour de l'axe du bras pour que la paume regarde la cible (miroir selon la main)
+ _vp.set(VMC.ptx*rig.side,VMC.pty,VMC.ptz).normalize();
+ _vz.set(0,0,-1).applyQuaternion(_vq).addScaledVector(_vd,-_vz.dot(_vd)).normalize();
+ _vt.copy(_vp).addScaledVector(_vd,-_vp.dot(_vd)).normalize();
+ _vc.crossVectors(_vz,_vt);const sg=Math.sign(_vd.dot(_vc))||1;
+ _vr.setFromAxisAngle(_vd,Math.acos(cl(_vz.dot(_vt),-1,1))*sg);_vq.premultiply(_vr);rig.arm.quaternion.copy(_vq);
+ rig.item.position.set(VMC.ix-rig.sw.position.x,VMC.iy-rig.sw.position.y,VMC.iz-rig.sw.position.z);
+ rig.item.rotation.set(VMC.irx,VMC.iry,VMC.irz)}
+// ---- texture de l'objet tenu (icône pixelisée du jeu, ou emoji)
+const vmTexC={},vmMeshC={};
+function vmTex(item){const k=item?.k||'x';if(vmTexC[k])return vmTexC[k];
+ const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d');x.imageSmoothingEnabled=false;
+ const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.magFilter=t.minFilter=THREE.NearestFilter;t.generateMipmaps=false;
+ const src=String(itemDef(item)[1]||'').match(/src=["']([^"']+)["']/);
+ if(src){const im=new Image();im.onload=()=>{x.clearRect(0,0,64,64);x.drawImage(im,0,0,64,64);t.needsUpdate=true};im.src=src[1]}
+ else{x.font='52px system-ui,"Apple Color Emoji","Segoe UI Emoji"';x.textAlign='center';x.textBaseline='middle';x.fillText(String(itemDef(item)[1]||'📦'),32,34)}
+ return vmTexC[k]=t}
+function vmItemMesh(item){const k=item.k+(item.cid?'#'+item.cid:'');if(vmMeshC[k])return vmMeshC[k];
+ const t=vmTex(item),blk=item.k.indexOf('o:')===0;
+ const m=blk?new THREE.Mesh(new THREE.BoxGeometry(VMC.blk,VMC.blk,VMC.blk),new THREE.MeshStandardMaterial({map:t,roughness:.85}))
+  :new THREE.Mesh(new THREE.PlaneGeometry(VMC.flat,VMC.flat),new THREE.MeshStandardMaterial({map:t,transparent:!0,alphaTest:.5,side:THREE.DoubleSide,roughness:.85}));
+ const g=new THREE.Group();g.add(m);return vmMeshC[k]=g}
+// ---- état + animations
+const VM={sw:0,atk:0,use:0,eat:0,swi:0,hurt:0,hp:20,lagX:0,lagY:0,yaw:0,pit:0,want:'',curKey:undefined,on:0};
+const vmKey_=s=>s?s.k+(s.cid?'#'+s.cid:''):'';
+function vmSwap(k){VM.curKey=k;const old=vmRig.item.children[0];if(old)vmRig.item.remove(old);
+ const it=inv.find(s=>vmKey_(s)===k);vmGlow.intensity=0;if(!it)return;
+ const m=vmItemMesh(it);if(!m)return;vmRig.item.add(m);
+ if(it.k==='torche'||it.k==='lanterne'||(it.k==='lampe_torche'&&fOn)){vmGlow.position.set(VMC.ix,VMC.iy+.06,VMC.iz);vmGlow.intensity=2.4}}
+function vmWant(){const k=vmKey_(inv[sel]);if(VM.curKey===undefined){VM.want=k;vmSwap(k);return}if(k!==VM.curKey){VM.want=k;VM.swi=1}}
+function vmPose(rig,dt,tm,main){
+ const sd=rig.side,st=me.c.st,bA=cl(st.sp/4.3,0,1)*cl(+cfg.bob||0,0,2),ph=me.c.ph+(main?0:PI),idle=1-bA;
+ // balancement de marche (figure en 8, calé sur les jambes du personnage) + respiration au repos
+ let px=Math.sin(ph)*.020*bA,py=-Math.abs(Math.cos(ph))*.013*bA,pz=Math.sin(ph)*.011*bA,
+  rx=Math.sin(ph)*.05*bA,rz=Math.cos(ph)*.05*bA*sd;
+ px+=Math.sin(tm*1.15)*.005*idle;py+=Math.sin(tm*1.75+sd)*.006*idle;rz+=Math.sin(tm*.85)*.014*idle;
+ px-=VM.lagX*.6*sd;py-=VM.lagY*.45;rz-=VM.lagX*1.2*sd;rx+=VM.lagY*1.3;   // inertie quand on tourne la tête
+ py-=.04*me.c.m.sn+.022*me.c.m.air-.055*me.c.m.ld;rx+=.12*me.c.m.sn;    // accroupi / air / réception
+ if(!main)py-=.02;
+ const swp=main?VM.swi*VM.swi:0;py-=.32*swp;rx+=.45*swp;                 // changement d'objet
+ // coup (clic gauche, cassage) : le bras part vers le bas et l'avant, les doigts se serrent
+ const u=1-VM.sw,sn=VM.sw>0?Math.sin(cl(u*1.08,0,1)*PI):0;
+ let sx=-.68*sn,sy=sn*.22*sd,sz=.40*sn*sd,curl=VMC.curl+sn*.5;
+ if(main&&VM.eat>0){const k=Math.sin(cl((1.1-VM.eat)/.22,0,1)*PI/2),bite=Math.sin(tm*15)*.018*k;
+  px+=(-VMC.ix-px)*k;py+=(.14-py)*k+bite;pz+=(.30-pz)*k;sx-=.55*k;sz+=.28*k*sd;curl+=.35*k}
+ else if(main&&VM.use>0){const q=Math.sin((1-cl(VM.use/.4,0,1))*PI);sx-=.38*q;pz-=.05*q;sz+=.22*q*sd}
+ if(VM.hurt>0){const h=VM.hurt/.3;pz+=.07*h;sx+=.38*h;py+=.03*h}
+ rig.bob.position.set(px,py,pz);rig.bob.rotation.set(rx,0,rz);
+ rig.sw.rotation.set(sx,sy,sz);rig.wrist.rotation.y=sn*.3*sd;
+ const cu=cl(curl,0,1.2);
+ for(let i=0;i<4;i++){const f=rig.fg[i];f.f.rotation.x=-cu;f.j.rotation.x=-1.25*cu;f.f.rotation.z=(i-1.5)*VMC.spread*(1-cu*.55)}
+ rig.th.rotation.x=-.25-.55*cu;rig.th.rotation.z=-.55+.25*cu}
+function vmTick(dt){
+ const tm=performance.now()/1000,hnd=cl(+cfg.hand||0,0,2),st=me.c.st,on=mode==='play'&&fp&&!dead&&hnd>0;
+ if(!on){if(VM.on){VM.on=0;vmRig.root.visible=vmOff.root.visible=false}return}
+ VM.on=1;
+ if(st.atk>VM.atk+.001)VM.sw=1;VM.atk=st.atk;                                   // nouveau coup
+ if(st.use>VM.use+.001&&inv[sel]&&itemDef(inv[sel])[5])VM.eat=1.1;VM.use=st.use; // manger
+ if(hp<VM.hp)VM.hurt=.3;VM.hp=hp;                                               // recul
+ VM.sw=Math.max(0,VM.sw-dt/.3);VM.eat=Math.max(0,VM.eat-dt);VM.hurt=Math.max(0,VM.hurt-dt);VM.swi=Math.max(0,VM.swi-dt*3.2);
+ if(VM.swi<.5&&VM.curKey!==VM.want)vmSwap(VM.want);
+ {const k=inv[sel]?.k;vmGlow.intensity=(k==='torche'||k==='lanterne'||(k==='lampe_torche'&&fOn))?2.4:0}
+ const hz=cl(+cfg.hsz||1,.5,1.6);
+ vmRig.root.visible=true;vmOff.root.visible=hnd>1;
+ vmRig.root.scale.setScalar(hz);vmOff.root.scale.set(-hz,hz,hz);
+ vmPlace(vmRig);vmPlace(vmOff);
+ VM.lagX=lp(VM.lagX,cl((yaw-VM.yaw)*2.4,-.08,.08),1-Math.exp(-dt*12));VM.yaw=yaw;
+ VM.lagY=lp(VM.lagY,cl((pit-VM.pit)*2.4,-.08,.08),1-Math.exp(-dt*12));VM.pit=pit;
+ vmPose(vmRig,dt,tm,1);vmPose(vmOff,dt,tm,0)}
+function vmRender(){if(!VM.on)return;
+ vmCam.aspect=cam.aspect;vmCam.updateProjectionMatrix();
+ vmHemi.color.copy(hemi.color);vmHemi.groundColor.copy(hemi.groundColor);vmHemi.intensity=.35+hemi.intensity*.7;
+ vmKey.color.copy(sun.color);vmKey.intensity=.4+sun.intensity*.55;
+ const ac=R.autoClear;R.autoClear=false;R.clearDepth();R.render(vmScene,vmCam);R.autoClear=ac}
+ticks.push(vmTick);vmWant();vmReady=1;
+Object.assign(window.game,{hand:{pose:VMC,cfg,state:VM,scene:vmScene,camera:vmCam,arm:vmRig,off:vmOff,place:vmPlace,swap:vmSwap}});
 // ---------- boucle
 let last=performance.now(),sendT=0;
 function frame(now){requestAnimationFrame(frame);const dt=Math.min(.05,(now-last)/1000);last=now;const tm=now/1000;
@@ -1188,6 +1309,7 @@ function frame(now){requestAnimationFrame(frame);const dt=Math.min(.05,(now-last
  if(zOn&&!fp){const L=!!document.pointerLockElement;ztg.style.display='block';ztg.style.left=(L?innerWidth/2:mx)+'px';ztg.style.top=(L?innerHeight/2:my)+'px'}else ztg.style.display='none';
  me.c.g.visible=!(mode==='play'&&fp&&!dead);sun.target.position.copy(me.pos);env();
  R.render(sc,cam);
+ vmRender();
  prevs.forEach(p=>{if(p.el.parentElement.classList.contains('hid'))return;p.ch.g.rotation.y=p.yaw;p.ch.st.sp=0;if(p.el.id==='pv4'){p.ch.mo=vs.mo||0;p.ch.amp=vcfg.amp;p.ch.setML(vcfg.ml)}anim(p.ch,dt,tm);if(p.el.id==='pv2'){if(!p.d)p.yaw=lp(p.yaw,0,.1);const q=p.el.getBoundingClientRect();p.ch.head.rotation.y=cl((mx-q.left-q.width/2)/350,-1,1);p.ch.head.rotation.x=cl((my-q.top-q.height*.22)/350,-.6,.6)}p.r.render(p.s,p.c)})}
 requestAnimationFrame(frame);window.__ready=1;$('#msg').textContent='';
 </script></body></html>

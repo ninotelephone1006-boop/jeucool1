@@ -54,3 +54,21 @@ L'import de modèles `.glb` / `.gltf` / `.obj` a été **retiré** du jeu (plus 
 - **C** (maintenu) : zoom. En 1re personne, zoom classique au centre de l'écran ; en 3e personne (F5), le zoom se fait sur l'endroit où est le curseur.
 - **Molette en maintenant C** : règle la force du zoom (de ×1,2 à ×12, maximum réglable dans PARAMÈTRES).
 - **F5** : bascule 1re / 3e personne.
+
+## 9. Main en 1re personne (vue à la première personne, style Minecraft)
+
+En 1re personne (touche **F5**), ta propre main apparaît en bas de l'écran avec l'objet que tu tiens, comme dans Minecraft. Le modèle est entièrement custom : avant-bras avec manche (calque du skin), paume, 4 doigts articulés et pouce, le tout texturé avec **ton skin**. La main est rendue dans une scène séparée, par-dessus le décor : elle n'est jamais coupée par les blocs.
+
+Animations procédurales incluses :
+- balancement de marche synchronisé sur les jambes du personnage + respiration au repos ;
+- inertie de la main quand tu tournes la caméra ;
+- coup / cassage (clic gauche) : le bras pivote vers le bas et les doigts se serrent ;
+- changement d'objet : la main descend puis remonte, l'objet est échangé à mi-course ;
+- manger : la main monte vers la bouche avec de petites bouchées ;
+- recul quand tu prends un coup ; accroupi / saut / réception.
+
+Objet tenu : les blocs (`o:`) apparaissent en 3D (cube texturé), les autres objets en carte inclinée avec leur icône pixelisée. Torche / lanterne / lampe torche allumée éclairent la main.
+
+Réglages (PARAMÈTRES) : « Main visible en 1re personne » (désactivée / main droite / les deux mains), « Balancement de la main » et « Taille de la main ». Les deux mains = une seconde main en miroir à gauche.
+
+API de debug (console) : `game.hand` expose la pose (`pose`), l'état (`state`), les rigs (`arm`, `off`) et `place`/`swap` pour ajuster la pose en direct.
