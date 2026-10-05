@@ -79,6 +79,33 @@ Les fichiers du dossier `Sounds/` sont utilisés par le jeu :
 
 - `buttonuiclick.mp3` pour les boutons, cases d’inventaire et cartes de l’interface ;
 - `Hit.mp3` pour un coup normal en combat ;
-- `CriticalHit.mp3` pour un coup critique.
+- `CriticalHit.mp3` pour un coup critique ;
+- `join.mp3` quand un joueur **arrive** (y compris toi au moment où tu rejoins le monde) ;
+- `leave.mp3` quand un joueur **part**.
 
 Le réglage **Effets sonores** (et le volume général) contrôle leur niveau. GitHub Pages sert directement les fichiers du dossier ; `server.js` les expose aussi sur `/Sounds/` pour le lancement local ou l’hébergement Node.js.
+
+## 12. Le skin par défaut : `textures/basicskin.png`
+
+Un joueur qui n’a pas importé de skin (ou dont le skin n’a pas encore été reçu) n’est **plus** affiché avec le skin de secours dessiné par le code : le jeu charge `textures/basicskin.png` (PNG **64 × 64**, format Minecraft moderne, couche « chapeau » transparente) et l’applique à tous les personnages sans skin.
+
+- L’image est chargée **une seule fois** au démarrage et appliquée aux personnages sans skin, y compris ceux déjà présents ; dès qu’un joueur envoie son skin, celui-ci remplace le skin de base.
+- Un PNG **32 × 64** (ancien format) est accepté : les jambes sont recopiées automatiquement au bon endroit, comme à l’import d’un skin.
+- Le dossier est servi tel quel par GitHub Pages ; `server.js` expose aussi `/textures/basicskin.png`.
+- Pour utiliser une autre image, définis `window.COMMUNITY_WORLD_SKIN` avant le script du jeu :
+  `window.COMMUNITY_WORLD_SKIN = 'textures/mon-autre-skin.png';`
+
+## 13. Animations de l’interface (v8)
+
+L’interface a été entièrement animée (tout est désactivé automatiquement si le système demande « réduire les animations ») :
+
+- **Menus** : fond animé derrière les panneaux (halos qui dérivent + particules qui montent), titre et sous-titres en dégradé animé, apparition des boutons avec rebond, apparition des panneaux en fondu + flou, ondulation au clic sur les boutons et les cartes.
+- **Inventaire / barre rapide** : les cases se soulèvent au survol, la case tenue pulse, les cartes de la bibliothèque réagissent à la souris, barres de défilement personnalisées.
+- **Chat** : chaque message glisse en apparaissant.
+- **Combat** : secousse de l’écran à chaque dégât reçu, vignette rouge (déjà existante), cœur qui clignote quand la vie est basse, apparition animée de l’écran « VOUS ÊTES MORT ».
+- **Notifications** : à l’arrivée ou au départ d’un joueur, une carte glisse en haut à droite avec son **visage**, son **pseudo**, une barre de temps et la couleur correspondante (vert = arrivée, orange = départ). Quatre notifications au maximum, les plus anciennes partent.
+- **Effets 3D** :
+  - **à l’arrivée** d’un joueur : il apparaît en fondu avec un effet de pop (échelle), un anneau au sol, un faisceau de lumière et une gerbe de particules, et le son `join.mp3` est joué ;
+  - **au départ** d’un joueur : il **s’efface en tournant** tout en rétrécissant, avec des particules, un anneau et le son `leave.mp3` ;
+  - ton propre personnage apparaît aussi avec l’effet de pop (au premier chargement du monde et à chaque réapparition).
+- **Micro** : le bouton pulse en vert quand tu parles ; la barre de vie et les curseurs ont des transitions douces.
