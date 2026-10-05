@@ -576,7 +576,7 @@ const _fpMO=new THREE.MeshStandardMaterial({map:me.c.tex,roughness:1,transparent
 fpArmGrp.add(fpArm);
 const fpHeldMat=new THREE.MeshStandardMaterial({depthTest:false,depthWrite:false});
 const fpHeld=new THREE.Mesh(new THREE.BoxGeometry(.18,.18,.5),fpHeldMat);fpHeld.position.set(0,-10*S,.2);fpHeld.visible=false;fpHeld.renderOrder=998;fpArm.add(fpHeld);
-let fpPrevSel=sel,fpSwT=0;
+let fpPrevSel=0,fpSwT=0;
 function mkRemote(p){if(!p||p.id==null)return;if(RM[p.id]){sc.remove(RM[p.id].c.g);delete RM[p.id]}const c=mkChar(defSkin(0));if(p.skin)loadSkin(p.skin).then(x=>c.setSkin(x));c.g.add(tag(p.name));sc.add(c.g);const s=p.s||{x:0,y:0,z:0,ry:0};c.g.position.set(s.x||0,s.y||0,s.z||0);RM[p.id]={c,tg:s,la:s.atk||0,nm:p.name};if(p.eyes){c.eye=p.eyes;eyeDraw(c,0)}}
 function join(){send({t:'join',name:$('#nm').value||'Joueur',skin:localStorage.skin,eyes:eyeCfg})}
 function startLocal(){ws=localWS();ws.onmessage=onMsg;$('#msg').textContent='Mode local : monde sauvegardé dans ce navigateur (onglets synchronisés).';join()}
