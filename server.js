@@ -1,10 +1,37 @@
 const http = require('http');
+const fs = require('fs');
+const path = require('path');
 const { WebSocketServer } = require('ws');
 
 const PORT = process.env.PORT || 10000;
 const MAX_AUDIO_CHARS = 20 * 1024 * 1024;
 const MAX_TEX_CHARS = 30 * 1024 * 1024;
+const MAX_RESTORE_TEX_CHARS = 24 * 1024 * 1024;
+const GRID = 257 * 257;
+
+const INDEX_FILE = path.join(__dirname, 'index.html');
+let indexHtml = null;
+function serveGame(res) {
+  try {
+    if (indexHtml === null) {
+      indexHtml = fs.readFileSync(INDEX_FILE, 'utf8');
+      // Quand la page est servie par ce serveur, le jeu se connecte au même
+      // hôte (ws/wss) au lieu du serveur public par défaut.
+      indexHtml = indexHtml.replace('<head>',
+        '<head>\n<script>/* servi par le serveur du jeu : même hôte pour le WebSocket */' +
+        'window.COMMUNITY_WORLD_WS=(location.protocol==="https:"?"wss://":"ws://")+location.host;</script>');
+    }
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+    res.end(indexHtml);
+  } catch (e) {
+    res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+    res.end('index.html introuvable.');
+  }
+}
+
 const server = http.createServer((req, res) => {
+  const url = String(req.url || '/').split('?')[0];
+  if (url === '/' || url === '/index.html') return serveGame(res);
   res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' });
   res.end('COMMUNITY WORLD WebSocket server is running.');
 });
@@ -27,6 +54,63 @@ const world = {
 
 const now = () => Date.now();
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+// ---------- Sauvegarde du monde sur le disque ----------
+// La carte ne dépend plus des joueurs connectés : elle est écrite sur le disque
+// et rechargée au démarrage, donc elle ne change plus même si tout le monde
+// quitte le monde (ou si le serveur redémarre).
+const SAVE_FILE = process.env.WORLD_SAVE || path.join(__dirname, 'world-save.json');
+const SAVE_TMP = SAVE_FILE + '.tmp';
+const SAVE_DELAY = 2500, SAVE_MIN_GAP = 8000;
+let saveTimer = null, saveDirty = false, lastSaveAt = 0;
+
+function worldEmpty() {
+  return Object.keys(world.objs).length === 0 &&
+    Object.keys(world.drops).length === 0 &&
+    !world.h.some(v => Math.abs(v) > .0001);
+}
+function markDirty() {
+  saveDirty = true;
+  // Les modifications arrivent en rafale (construction, terrain) : on regroupe.
+  if (!saveTimer) saveTimer = setTimeout(saveWorld, Math.max(SAVE_DELAY, SAVE_MIN_GAP - (now() - lastSaveAt)));
+}
+function saveWorld() {
+  if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+  if (!saveDirty) return;
+  const data = {
+    v: 1, savedAt: now(), time: world.time,
+    objs: world.objs, tex: world.tex, drops: world.drops, jukes: world.jukes,
+    h: world.h.map(v => Math.round((Number(v) || 0) * 100) / 100),
+    c: world.c.map(v => clamp(Math.floor(Number(v) || 0), 0, 7))
+  };
+  try {
+    fs.writeFileSync(SAVE_TMP, JSON.stringify(data));
+    fs.renameSync(SAVE_TMP, SAVE_FILE);
+    saveDirty = false;
+    lastSaveAt = now();
+    console.log(`Monde sauvegardé : ${Object.keys(world.objs).length} objets, ${Object.keys(world.drops).length} objets au sol.`);
+  } catch (e) {
+    console.warn('Sauvegarde du monde impossible :', e.message);
+  }
+}
+function loadWorld() {
+  let raw;
+  try { raw = fs.readFileSync(SAVE_FILE, 'utf8'); }
+  catch (e) { if (e.code !== 'ENOENT') console.warn('Sauvegarde illisible :', e.message); return; }
+  try {
+    const s = JSON.parse(raw);
+    if (s.objs && typeof s.objs === 'object') world.objs = s.objs;
+    if (s.tex && typeof s.tex === 'object') world.tex = s.tex;
+    if (s.drops && typeof s.drops === 'object') world.drops = s.drops;
+    if (s.jukes && typeof s.jukes === 'object') world.jukes = s.jukes;
+    if (Number.isFinite(+s.time)) world.time = clamp(+s.time, 0, 24000);
+    if (Array.isArray(s.h) && s.h.length === GRID) world.h = s.h.map(v => clamp(cleanNum(v), -200, 200));
+    if (Array.isArray(s.c) && s.c.length === GRID) world.c = s.c.map(v => clamp(Math.floor(cleanNum(v)), 0, 7));
+    console.log(`Monde rechargé depuis ${path.basename(SAVE_FILE)} : ${Object.keys(world.objs).length} objets.`);
+  } catch (e) {
+    console.warn('Sauvegarde corrompue, monde neuf :', e.message);
+  }
+}
 function send(ws, msg) {
   if (ws.readyState === 1) ws.send(JSON.stringify(msg));
 }
@@ -97,6 +181,7 @@ function spawnDrop(owner, item, p, v) {
   const vel = cleanVec(v, [0, 3, 0]).map((n, i) => clamp(n, i === 1 ? -2 : -6, i === 1 ? 8 : 6));
   const d = { id, owner, item: safeItem, p: pos, v: vel, born, pickupAfter: born + 600 };
   world.drops[id] = d;
+  markDirty();
   broadcastAll({ t: 'drop', d });
   return d;
 }
@@ -147,7 +232,8 @@ wss.on('connection', (ws) => {
       for (const [pid, p] of players) plist[pid] = p.p;
       send(ws, {
         t: 'init', id, pos: null, players: plist, objs: world.objs, tex: world.tex,
-        drops: world.drops, jukes: world.jukes, ops: world.ops, time: world.time, h: world.h, c: world.c
+        drops: world.drops, jukes: world.jukes, ops: world.ops, time: world.time, h: world.h, c: world.c,
+        seed: worldEmpty()
       });
       broadcast({ t: 'join', p: me }, ws);
       return;
@@ -178,6 +264,7 @@ wss.on('connection', (ws) => {
     if (m.t === 'time') {
       const v = Math.max(0, Math.min(24000, cleanNum(m.v, world.time)));
       world.time = v;
+      markDirty();
       broadcastAll({ t: 'time', v });
       return;
     }
@@ -189,6 +276,7 @@ wss.on('connection', (ws) => {
       if (!box || box.type !== 'jukebox' || distance(me.s || {}, box.p) > 16) return;
       if (m.stop) {
         delete world.jukes[oid];
+        markDirty();
         broadcastAll({ t: 'juke', id: oid, stop: 1, from: id });
         return;
       }
@@ -198,7 +286,46 @@ wss.on('connection', (ws) => {
         data: m.data, from: id, startedAt: now()
       };
       world.jukes[oid] = state;
+      markDirty();
       broadcastAll({ t: 'juke', ...state });
+      return;
+    }
+
+    if (m.t === 'world') {
+      // Restauration : un client renvoie la carte qu'il garde dans son navigateur
+      // quand le serveur a perdu le monde (redémarrage, mise en veille…).
+      // Acceptée uniquement si le serveur n'a vraiment plus rien.
+      if (!worldEmpty()) return;
+      const h = Array.isArray(m.h) && m.h.length === GRID ? m.h.map(v => clamp(cleanNum(v), -200, 200)) : null;
+      const c = Array.isArray(m.c) && m.c.length === GRID ? m.c.map(v => clamp(Math.floor(cleanNum(v)), 0, 7)) : null;
+      const objs = {};
+      if (m.objs && typeof m.objs === 'object') {
+        for (const [oid, raw] of Object.entries(m.objs).slice(0, 4000)) {
+          const o = sanitizeObj(raw);
+          if (!o) continue;
+          o.id = String(oid).slice(0, 220);
+          objs[o.id] = o;
+        }
+      }
+      const tex = {};
+      let budget = MAX_RESTORE_TEX_CHARS;
+      if (m.tex && typeof m.tex === 'object') {
+        for (const [tid, d] of Object.entries(m.tex)) {
+          if (typeof tid !== 'string' || tid.length > 220 || typeof d !== 'string' || d.length > budget) continue;
+          tex[tid] = d;
+          budget -= d.length;
+        }
+      }
+      if (h) world.h = h;
+      if (c) world.c = c;
+      world.objs = objs;
+      world.drops = {};
+      world.jukes = {};
+      Object.assign(world.tex, tex);
+      if (Number.isFinite(+m.time)) world.time = clamp(+m.time, 0, 24000);
+      markDirty();
+      console.log(`Monde restauré par un client : ${Object.keys(objs).length} objets, ${Object.keys(tex).length} textures.`);
+      broadcast({ t: 'world', objs: world.objs, tex: world.tex, drops: world.drops, jukes: world.jukes, h: world.h, c: world.c, time: world.time }, ws);
       return;
     }
 
@@ -213,6 +340,7 @@ wss.on('connection', (ws) => {
       applyTerrainOp(o);
       // New joiners receive the current height/color map (not a history to replay).
       world.ops.length = 0;
+      markDirty();
       broadcastAll({ t: 'op', o });
       return;
     }
@@ -221,6 +349,7 @@ wss.on('connection', (ws) => {
       if (typeof m.id !== 'string' || typeof m.d !== 'string') return;
       if (m.id.length > 220 || m.d.length > MAX_TEX_CHARS) return;
       world.tex[m.id] = m.d;
+      markDirty();
       broadcastAll({ t: 'tex', id: m.id, d: m.d });
       return;
     }
@@ -231,6 +360,7 @@ wss.on('connection', (ws) => {
       const oid = `o:${now().toString(36)}:${Math.random().toString(36).slice(2, 9)}`;
       o.id = oid;
       world.objs[oid] = o;
+      markDirty();
       broadcastAll({ t: 'add', o, by: id });
       return;
     }
@@ -248,6 +378,7 @@ wss.on('connection', (ws) => {
       if (typeof p.code === 'string') patch.code = p.code.slice(0, 20000);
       if (Array.isArray(p.items)) patch.items = p.items.slice(0, 27).map(sanitizeItem).filter(Boolean);
       Object.assign(target, patch);
+      markDirty();
       broadcastAll({ t: 'upd', id: m.id, p: patch });
       return;
     }
@@ -260,6 +391,7 @@ wss.on('connection', (ws) => {
         delete world.jukes[m.id];
         broadcastAll({ t: 'juke', id: m.id, stop: 1, from: id });
       }
+      markDirty();
       broadcastAll({ t: 'del', id: m.id });
       let items;
       if (o.type === 'model' && o.mdl) {
@@ -288,6 +420,7 @@ wss.on('connection', (ws) => {
         delete world.jukes[m.id];
         broadcastAll({ t: 'juke', id: m.id, stop: 1, from: id });
       }
+      markDirty();
       broadcastAll({ t: 'del', id: m.id });
       return;
     }
@@ -306,6 +439,7 @@ wss.on('connection', (ws) => {
       const d = world.drops[m.id];
       if (now() < (d.pickupAfter || 0) || distance(me.s || {}, d.p) > 3.2) return;
       delete world.drops[m.id];
+      markDirty();
       send(ws, { t: 'reward', items: [d.item] });
       broadcastAll({ t: 'dropdel', id: m.id });
       return;
@@ -316,6 +450,8 @@ wss.on('connection', (ws) => {
     if (!me) return;
     players.delete(id);
     broadcast({ t: 'leave', id });
+    // Plus personne : on écrit la carte sur le disque tout de suite.
+    if (players.size === 0) { saveDirty = true; saveWorld(); }
   });
 });
 
@@ -342,6 +478,7 @@ setInterval(() => {
       d.v[2] *= .62;
     }
     const moving = Math.hypot(d.v[0], d.v[1], d.v[2]) > .035;
+    if (Math.abs(d.p[0] - oldX) > .0001 || Math.abs(d.p[1] - oldY) > .0001 || Math.abs(d.p[2] - oldZ) > .0001) markDirty();
     if (t - (d.lastBroadcast || 0) >= 120 || (!moving && !d.rested)) {
       d.lastBroadcast = t;
       d.rested = !moving;
@@ -356,8 +493,23 @@ setInterval(() => {
 setInterval(() => {
   const cutoff = now() - 15 * 60 * 1000;
   for (const [id, d] of Object.entries(world.drops)) {
-    if (d.born < cutoff) { delete world.drops[id]; broadcastAll({ t: 'dropdel', id }); }
+    if (d.born < cutoff) { delete world.drops[id]; markDirty(); broadcastAll({ t: 'dropdel', id }); }
   }
 }, 60_000).unref();
 
+// Sauvegarde périodique de sécurité (objets au sol, modifications en attente).
+setInterval(() => { if (saveDirty) saveWorld(); }, 20_000).unref();
+
+function shutdown(signal) {
+  console.log(`Arrêt (${signal}) : sauvegarde du monde…`);
+  saveDirty = true;
+  saveWorld();
+  server.close(() => process.exit(0));
+  setTimeout(() => process.exit(0), 2000).unref();
+}
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('exit', () => { if (saveDirty) saveWorld(); });
+
+loadWorld();
 server.listen(PORT, '0.0.0.0', () => console.log(`COMMUNITY WORLD server listening on port ${PORT}`));

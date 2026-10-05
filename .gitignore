@@ -1,0 +1,5 @@
+node_modules/
+world-save.json
+world-save.json.tmp
+npm-debug.log*
+.DS_Store
