@@ -1201,7 +1201,9 @@ function frame(now){requestAnimationFrame(frame);const dt=Math.min(.05,(now-last
  zhud.classList.toggle('on',zOn);if(zOn)zhud.textContent='🔍 zoom ×'+zCur.toFixed(1)+(fp?'':' — sur le curseur');
  if(zOn&&!fp){const L=!!document.pointerLockElement;ztg.style.display='block';ztg.style.left=(L?innerWidth/2:mx)+'px';ztg.style.top=(L?innerHeight/2:my)+'px'}else ztg.style.display='none';
  // ---- Animation main première personne (style Minecraft) ----
- fpArmGrp.visible=mode==='play'&&fp&&!dead;
+ // !! obligatoire : sans ça, en 3e personne l'expression vaut 0 (nombre) et Three.js
+ // teste `visible === false` strictement → le bras 1re personne restait affiché en 3e.
+ fpArmGrp.visible=!!(mode==='play'&&fp&&!dead);
  if(fpArmGrp.visible){
   const sp=st.sp||0,sw=Math.sin(me.c.ph),amp=cl(sp/4.3,0,1),run=sp>5.2?1:0,idle=1-cl(amp,0,1);
   const br=Math.sin(tm*1.9),idl=Math.sin(tm*1.4);
