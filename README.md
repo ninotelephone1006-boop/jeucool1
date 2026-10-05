@@ -53,4 +53,8 @@ L'import de modèles `.glb` / `.gltf` / `.obj` a été **retiré** du jeu (plus 
 ## 8. Commandes du jeu
 - **C** (maintenu) : zoom. En 1re personne, zoom classique au centre de l'écran ; en 3e personne (F5), le zoom se fait sur l'endroit où est le curseur.
 - **Molette en maintenant C** : règle la force du zoom (de ×1,2 à ×12, maximum réglable dans PARAMÈTRES).
-- **F5** : bascule 1re / 3e personne.
+- **F5** : bascule 1re / 3e personne (sans bras affiché en 1re personne).
+
+## 9. Capes personnalisées
+
+Dans **PERSONNALISER → CRÉER / MODIFIER MA CAPE**, choisis une image (PNG, JPEG, WebP, etc.), glisse-la dans le cadre et règle le zoom pour la recadrer. **Appliquer la cape** l’enregistre en PNG (160 × 256) et la partage aux autres joueurs ; **Télécharger le PNG** exporte le fichier. Le bouton **Retirer la cape** l’efface. La cape reste sur cet appareil pour les prochaines parties.

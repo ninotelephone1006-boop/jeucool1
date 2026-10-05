@@ -232,7 +232,7 @@ wss.on('connection', (ws) => {
     if (!m || typeof m.t !== 'string') return;
 
     if (m.t === 'join') {
-      me = { id, name: cleanName(m.name), skin: typeof m.skin === 'string' ? m.skin.slice(0, 2_000_000) : null, eyes: m.eyes || null, s: null };
+      me = { id, name: cleanName(m.name), skin: typeof m.skin === 'string' ? m.skin.slice(0, 2_000_000) : null, cape: typeof m.cape === 'string' ? m.cape.slice(0, 600_000) : null, eyes: m.eyes || null, s: null };
       players.set(id, { ws, p: me });
       const plist = {};
       for (const [pid, p] of players) plist[pid] = p.p;
@@ -260,6 +260,7 @@ wss.on('connection', (ws) => {
     }
     if (m.t === 'eyes') { me.eyes = m.e || null; broadcast({ t: 'eyes', id, e: me.eyes }, ws); return; }
     if (m.t === 'skin') { me.skin = typeof m.skin === 'string' ? m.skin.slice(0, 2_000_000) : null; broadcast({ t: 'skin', id, skin: me.skin }, ws); return; }
+    if (m.t === 'cape') { me.cape = typeof m.cape === 'string' ? m.cape.slice(0, 600_000) : null; broadcast({ t: 'cape', id, cape: me.cape }, ws); return; }
     if (m.t === 'chat') { broadcast({ t: 'chat', id, n: me.name, m: String(m.m || '').slice(0, 200) }); return; }
     if (m.t === 'voice') {
       if (typeof m.d !== 'string' || m.d.length > 400_000) return;
