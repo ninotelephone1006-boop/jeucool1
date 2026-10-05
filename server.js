@@ -18,7 +18,13 @@ const INDEX_FILE = path.join(__dirname, 'index.html');
 const SOUND_ASSETS = new Map([
   ['/Sounds/CriticalHit.mp3', 'CriticalHit.mp3'],
   ['/Sounds/Hit.mp3', 'Hit.mp3'],
-  ['/Sounds/buttonuiclick.mp3', 'buttonuiclick.mp3']
+  ['/Sounds/buttonuiclick.mp3', 'buttonuiclick.mp3'],
+  ['/Sounds/join.mp3', 'join.mp3'],
+  ['/Sounds/leave.mp3', 'leave.mp3']
+]);
+// Skin par défaut affiché quand un joueur n'a pas de skin (dossier textures/).
+const TEXTURE_ASSETS = new Map([
+  ['/textures/basicskin.png', 'basicskin.png']
 ]);
 let indexHtml = null;
 function serveGame(res) {
@@ -51,6 +57,22 @@ const server = http.createServer((req, res) => {
       }
       res.writeHead(200, {
         'Content-Type': 'audio/mpeg',
+        'Content-Length': data.length,
+        'Cache-Control': 'public, max-age=86400',
+        'X-Content-Type-Options': 'nosniff'
+      });
+      res.end(req.method === 'HEAD' ? undefined : data);
+    });
+  }
+  const textureFile = TEXTURE_ASSETS.get(url);
+  if (textureFile && (req.method === 'GET' || req.method === 'HEAD')) {
+    return fs.readFile(path.join(__dirname, 'textures', textureFile), (err, data) => {
+      if (err) {
+        res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+        return res.end('Texture introuvable.');
+      }
+      res.writeHead(200, {
+        'Content-Type': 'image/png',
         'Content-Length': data.length,
         'Cache-Control': 'public, max-age=86400',
         'X-Content-Type-Options': 'nosniff'
