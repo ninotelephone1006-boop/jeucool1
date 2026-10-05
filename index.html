@@ -566,6 +566,17 @@ function rmObj(id){const b=OB[id];if(b){og.remove(b.g);delete OB[id];if(selId!=n
 let ws=null,myId=0,mode='menu',paused=false,build=false,pendSel=0;const RM={};
 const send=o=>ws&&ws.readyState===1&&ws.send(JSON.stringify(o));
 const me={pos:new THREE.Vector3(0,0,0),v:new THREE.Vector3(),ry:0,vy:0,c:mkChar(myCv),atkc:0,eye:1.55};sc.add(me.c.g);
+// ========== MAIN PREMIÈRE PERSONNE (STYLE MINECRAFT) ==========
+sc.add(cam);
+const fpArmGrp=new THREE.Group();cam.add(fpArmGrp);fpArmGrp.visible=false;
+const fpArm=new THREE.Group();fpArm.position.set(.32,-.28,-.42);
+const _fpMB=new THREE.MeshStandardMaterial({map:me.c.tex,roughness:1,depthTest:false,depthWrite:false});
+const _fpMO=new THREE.MeshStandardMaterial({map:me.c.tex,roughness:1,transparent:true,alphaTest:.5,side:THREE.DoubleSide,depthTest:false,depthWrite:false});
+[[0,[40,16],_fpMB],[.4,[40,32],_fpMO]].forEach(([e,[u,v],m])=>{const geo=new THREE.BoxGeometry((4+e*2)*S,(12+e*2)*S,(4+e*2)*S);uvs(geo,4,12,4,u,v);const mesh=new THREE.Mesh(geo,m);mesh.position.y=-4*S;mesh.renderOrder=998;fpArm.add(mesh)});
+fpArmGrp.add(fpArm);
+const fpHeldMat=new THREE.MeshStandardMaterial({depthTest:false,depthWrite:false});
+const fpHeld=new THREE.Mesh(new THREE.BoxGeometry(.18,.18,.5),fpHeldMat);fpHeld.position.set(0,-10*S,.2);fpHeld.visible=false;fpHeld.renderOrder=998;fpArm.add(fpHeld);
+let fpPrevSel=sel,fpSwT=0;
 function mkRemote(p){if(!p||p.id==null)return;if(RM[p.id]){sc.remove(RM[p.id].c.g);delete RM[p.id]}const c=mkChar(defSkin(0));if(p.skin)loadSkin(p.skin).then(x=>c.setSkin(x));c.g.add(tag(p.name));sc.add(c.g);const s=p.s||{x:0,y:0,z:0,ry:0};c.g.position.set(s.x||0,s.y||0,s.z||0);RM[p.id]={c,tg:s,la:s.atk||0,nm:p.name};if(p.eyes){c.eye=p.eyes;eyeDraw(c,0)}}
 function join(){send({t:'join',name:$('#nm').value||'Joueur',skin:localStorage.skin,eyes:eyeCfg})}
 function startLocal(){ws=localWS();ws.onmessage=onMsg;$('#msg').textContent='Mode local : monde sauvegardé dans ce navigateur (onglets synchronisés).';join()}
@@ -730,7 +741,7 @@ function renderInv(){try{localStorage.inv=JSON.stringify(inv)}catch(e){}const f=
 function sclick(a,i,rt){const s=a[i];if(!cur){if(s){if(rt&&s.n>1){const h=s.n>>1;cur=cloneItem(s,h);s.n-=h}else{cur=s;a[i]=null}}}
  else if(!s){if(rt&&cur.n>1){a[i]=cloneItem(cur,1);cur.n--}else{a[i]=cur;cur=null}}
  else if(s.k===cur.k&&!s.model&&!cur.model&&!s.cid&&!cur.cid){const t=Math.min(itemDef(s)[2]-s.n,rt?1:cur.n);s.n+=t;cur.n-=t;if(!cur.n)cur=null}else{a[i]=cur;cur=s}renderInv()}
-function held(){const s=inv[sel];me.c.held.visible=!!s;if(s)me.c.held.material.color.set(itemDef(s)[3])}
+function held(){const s=inv[sel];me.c.held.visible=!!s;if(s)me.c.held.material.color.set(itemDef(s)[3]);if(fpHeld){fpHeld.visible=!!s;if(s&&fpHeldMat)fpHeldMat.color.set(itemDef(s)[3])}}
 $('#inv').onmousedown=e=>{if(e.target.closest('.slot'))return;if(cur){throwItem(cur);cur=null;renderInv()}};
 document.addEventListener('mousedown',e=>{if(!invOpen||!cur||e.target.closest('#inv'))return;throwItem(cur);cur=null;renderInv()},true);
 onmousemove=e=>{$('#cur').style.left=e.clientX+8+'px';$('#cur').style.top=e.clientY+8+'px'};renderInv();
@@ -1189,6 +1200,36 @@ function frame(now){requestAnimationFrame(frame);const dt=Math.min(.05,(now-last
  const zOn=zCur>1.02&&mode==='play'&&!dead;
  zhud.classList.toggle('on',zOn);if(zOn)zhud.textContent='🔍 zoom ×'+zCur.toFixed(1)+(fp?'':' — sur le curseur');
  if(zOn&&!fp){const L=!!document.pointerLockElement;ztg.style.display='block';ztg.style.left=(L?innerWidth/2:mx)+'px';ztg.style.top=(L?innerHeight/2:my)+'px'}else ztg.style.display='none';
+ // ---- Animation main première personne (style Minecraft) ----
+ fpArmGrp.visible=mode==='play'&&fp&&!dead;
+ if(fpArmGrp.visible){
+  const sp=st.sp||0,sw=Math.sin(me.c.ph),amp=cl(sp/4.3,0,1),run=sp>5.2?1:0,idle=1-cl(amp,0,1);
+  const br=Math.sin(tm*1.9),idl=Math.sin(tm*1.4);
+  let rx=-.55,ry=.25,rz=-.12,px=.32,py=-.28,pz=-.42;
+  // respiration au repos
+  rx+=idl*.03*idle;py+=br*.004*idle;
+  // marche / course : balancement du bras
+  rx-=sw*amp*(.65+.25*run);rz+=sw*amp*.06;
+  py+=Math.abs(Math.sin(me.c.ph))*amp*.012;px+=Math.cos(me.c.ph*2)*amp*.004;
+  // attaque (clic gauche)
+  if(st.atk>0){const u=1-cl(st.atk/.35,0,1),sn=Math.sin(u*PI),w=cl(sn*3,0,1);rx=lp(rx,-.5-sn*1.9,w);rz=lp(rz,.25*sn,w)}
+  // utilisation (clic droit)
+  if(st.use>0){const w=cl(st.use*8,0,1);rx=lp(rx,-1.2+Math.sin(tm*18)*.22,w);rz=lp(rz,-.1,w)}
+  // accroupi
+  rx+=st.sn*.15;py-=st.sn*.04;px+=st.sn*.02;
+  // en l'air (saut)
+  if(st.air&&!st.fly&&!st.gl){rx-=.25;py+=.02}
+  // vol créatif
+  if(st.fly){rx+=.1+.4*cl(sp/9,0,1)}
+  // élytres (plané)
+  if(st.gl){rx=lp(rx,.3,.5);ry=lp(ry,0,.5)}
+  // changement d'objet (animation switch)
+  if(sel!==fpPrevSel){fpPrevSel=sel;fpSwT=.2}
+  if(fpSwT>0){fpSwT=Math.max(0,fpSwT-dt);const u=fpSwT/.2,sn=Math.sin(u*PI);py-=sn*.15;rx+=sn*.3}
+  fpArm.position.set(px,py,pz);fpArm.rotation.set(rx,ry,rz);
+  // synchroniser l'objet en main
+  fpHeld.visible=!!inv[sel];if(inv[sel])fpHeldMat.color.set(itemDef(inv[sel])[3]);
+ }
  me.c.g.visible=!(mode==='play'&&fp&&!dead);sun.target.position.copy(me.pos);env();
  R.render(sc,cam);
  prevs.forEach(p=>{if(p.el.parentElement.classList.contains('hid'))return;p.ch.g.rotation.y=p.yaw;p.ch.st.sp=0;if(p.el.id==='pv4'){p.ch.mo=vs.mo||0;p.ch.amp=vcfg.amp;p.ch.setML(vcfg.ml)}anim(p.ch,dt,tm);if(p.el.id==='pv2'){if(!p.d)p.yaw=lp(p.yaw,0,.1);const q=p.el.getBoundingClientRect();p.ch.head.rotation.y=cl((mx-q.left-q.width/2)/350,-1,1);p.ch.head.rotation.x=cl((my-q.top-q.height*.22)/350,-.6,.6)}p.r.render(p.s,p.c)})}
