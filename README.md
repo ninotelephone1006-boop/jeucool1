@@ -48,3 +48,8 @@ Les fichiers `.glb`, `.gltf` et `.obj` peuvent peser jusqu’à **100 Mo par mod
 - **C** (maintenu) : zoom. En 1re personne, zoom classique au centre de l'écran ; en 3e personne (F5), le zoom se fait sur l'endroit où est le curseur.
 - **Molette en maintenant C** : règle la force du zoom (de ×1,2 à ×12, maximum réglable dans PARAMÈTRES).
 - **F5** : bascule 1re / 3e personne.
+
+## 8. Objets au sol, info-bulles et terrain
+- **Clearlag** : un objet jeté au sol disparaît au bout de **2 minutes**. Le serveur le supprime et prévient tous les joueurs connectés (`dropdel`) ; en mode local, la copie du navigateur (`cw_world`) les efface aussi. Les 8 dernières secondes, l'objet rétrécit et s'estompe pour prévenir.
+- **Info-bulle d'inventaire** : en survolant un objet (inventaire, barre rapide, coffre, équipement), son nom s'affiche à côté du curseur avec sa description. Un CD affiche `Cd "Nom donné"` en **multicouleur**.
+- **Trous** : la grande nappe blanche du sol est désormais percée au-dessus de la carte (256×256). Creuser ne fait plus apparaître une couche blanche au-dessus du trou : on voit le vrai creux dans le terrain.
