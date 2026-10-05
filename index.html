@@ -72,8 +72,9 @@ button:disabled{opacity:.45;cursor:not-allowed}
 <canvas id="c"></canvas>
 <div id="menu" class="p"><h1>COMMUNITY WORLD</h1><input type="text" id="nm" maxlength="16" placeholder="Pseudo" style="width:100%;margin:0 0 8px;cursor:text">
 <button id="bPlay">JOUER</button><button id="bCust">PERSONNALISER</button><button id="bEyes">👁 YEUX &amp; PAUPIÈRES</button><button id="bVoice">🎤 CHAT VOCAL &amp; BOUCHE</button><button id="bOpts">PARAMÈTRES</button><button id="bQuit">QUITTER</button><div id="msg" style="font-size:12px;margin-top:8px;color:#fc8">Chargement…</div></div>
-<div id="cust" class="p hid"><h2>PERSONNALISATION</h2><canvas id="pv1" class="pv" width="260" height="320"></canvas><div class="hint">Glisse l’aperçu pour tourner le personnage et voir sa cape.</div>
+<div id="cust" class="p hid"><h2>PERSONNALISATION</h2><canvas id="pv1" class="pv" width="260" height="320"></canvas><div class="hint">Glisse l’aperçu pour tourner le personnage et voir sa cape, ou utilise le bouton « VOIR LA CAPE ».</div>
 <button id="bSkin">IMPORTER UN SKIN (PNG 64×64)</button><input type="file" id="fSkin" accept="image/png" hidden>
+<button id="bCapeView">🔁 VOIR LA CAPE (FACE / DOS)</button>
 <button id="bCape">🧥 CRÉER / MODIFIER MA CAPE</button><div id="capeStatusMini" class="hint"></div>
 <div id="presets"></div><button class="back">RETOUR</button></div>
 <div id="cape" class="p hid"><h2>🧥 MA CAPE</h2>
@@ -83,6 +84,8 @@ button:disabled{opacity:.45;cursor:not-allowed}
 <label>Zoom<input type="range" id="capeZoom" min="1" max="4" step="0.01" value="1" disabled></label>
 <div class="g"><button id="bCapeReset" disabled>↺ Réinitialiser le recadrage</button><button id="bCapeApply" disabled>✅ Appliquer la cape</button></div>
 <div id="capeStatus" class="hint" role="status">Choisis une image pour commencer.</div>
+<canvas id="pvCape" class="pv" width="180" height="225" style="width:180px;height:225px"></canvas>
+<div class="hint">Aperçu de <b>dos</b> : ta cape apparaît ici dès que tu cliques sur ✅ Appliquer la cape. (Glisse l’aperçu pour tourner le personnage.)</div>
 <div class="g"><button id="bCapeDownload" disabled>⬇ Télécharger le PNG</button><button id="bCapeRemove">🗑 Retirer la cape</button><button id="bCapeBack">RETOUR</button></div>
 </div>
 <div id="opts" class="p hid"><h2>PARAMÈTRES</h2><div id="optl"></div><label>Qualité <select id="oq"><option value="0">Basse</option><option value="1">Moyenne</option><option value="2">Haute</option></select></label>
@@ -359,6 +362,8 @@ const prevs=[];function mkPrev(el){const r=new THREE.WebGLRenderer({canvas:el,al
  s.add(new THREE.HemisphereLight(0xffffff,0x999999,2.4));const ch=mkChar(myCv);if(myCape)ch.setCape(myCape);s.add(ch.g);r.setPixelRatio(1);r.setSize(el.width,el.height,false);const o={el,r,s,c,ch,yaw:.6,d:0};
  el.onpointerdown=e=>{o.d=1;el.setPointerCapture(e.pointerId)};el.onpointerup=()=>o.d=0;el.onpointermove=e=>{if(o.d)o.yaw+=e.movementX*.012};prevs.push(o)}
 mkPrev($('#pv1'));mkPrev($('#pv2'));mkPrev($('#pv3'));{const p=prevs.at(-1);p.yaw=0;p.c.position.set(0,1.58,1.5);p.c.lookAt(0,1.55,0)}mkPrev($('#pv4'));{const p=prevs.at(-1);p.yaw=.55;p.c.position.set(0,1.6,1.75);p.c.lookAt(0,1.57,0)}
+// aperçu de la cape : vue de dos, dans le panneau « MA CAPE »
+mkPrev($('#pvCape'));{const p=prevs.at(-1);p.yaw=PI;p.c.position.set(0,1.1,4.4);p.c.lookAt(0,1.02,0)}
 // ---------- bibliothèque d'objets
 const bx=(w,h,d,x,y,z,c)=>['b',w,h,d,x,y,z,c],cy=(w,h,x,y,z,c,e)=>['c',w,h,w,x,y,z,c,e],sp=(w,h,d,x,y,z,c,e)=>['s',w,h,d,x,y,z,c,e],pm=(w,h,d,x,y,z,c)=>['p',w,h,d,x,y,z,c];
 const wd='#8b5a2b',wl='#d9d4c7',gl='#9cf',gr='#2f7d32',stc='#888',L=(n,f)=>Array.from({length:n},(_,i)=>f(i));
@@ -1019,11 +1024,11 @@ $('#fSkin').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new File
 const capeCanvas=$('#capeCrop'),capeCtx=capeCanvas.getContext('2d');let cropImg=null,cropZoom=1,cropPanX=0,cropPanY=0,cropToken=0,cropDrag=null,capeExportData=myCape;
 function updateCapeSummary(){$('#capeStatusMini').textContent=myCape?'🧥 Cape appliquée — PNG 160 × 256.':'Aucune cape pour le moment.';$('#bCapeRemove').disabled=!myCape}
 function setCape(data){if(data&&(typeof data!=='string'||!data.startsWith('data:image/png;base64,')||data.length>600_000)){log('Image de cape invalide ou trop volumineuse.');return false}try{if(data)localStorage.setItem('cape',data);else localStorage.removeItem('cape')}catch(e){log('Impossible de sauvegarder la cape dans ce navigateur.');return false}myCape=data||null;[me.c,...prevs.map(p=>p.ch)].forEach(c=>c.setCape(myCape));send({t:'cape',cape:myCape});updateCapeSummary();return true}
-function drawCapeCrop(){capeCtx.clearRect(0,0,capeCanvas.width,capeCanvas.height);if(!cropImg){capeCtx.fillStyle='#fff';capeCtx.font='bold 15px system-ui';capeCtx.textAlign='center';capeCtx.textBaseline='middle';capeCtx.fillText('Choisis une image',capeCanvas.width/2,capeCanvas.height/2);return}const w=capeImg.naturalWidth||capeImg.width,h=capeImg.naturalHeight||capeImg.height,scale=Math.max(capeCanvas.width/w,capeCanvas.height/h)*cropZoom,dw=w*scale,dh=h*scale;cropPanX=cl(cropPanX,capeCanvas.width-dw,0);cropPanY=cl(cropPanY,capeCanvas.height-dh,0);capeCtx.drawImage(cropImg,(capeCanvas.width-dw)/2+cropPanX,(capeCanvas.height-dh)/2+cropPanY,dw,dh)}
+function drawCapeCrop(){capeCtx.clearRect(0,0,capeCanvas.width,capeCanvas.height);if(!cropImg){capeCtx.fillStyle='#fff';capeCtx.font='bold 15px system-ui';capeCtx.textAlign='center';capeCtx.textBaseline='middle';capeCtx.fillText('Choisis une image',capeCanvas.width/2,capeCanvas.height/2);return}const w=cropImg.naturalWidth||cropImg.width,h=cropImg.naturalHeight||cropImg.height,scale=Math.max(capeCanvas.width/w,capeCanvas.height/h)*cropZoom,dw=w*scale,dh=h*scale;cropPanX=cl(cropPanX,capeCanvas.width-dw,0);cropPanY=cl(cropPanY,capeCanvas.height-dh,0);capeCtx.drawImage(cropImg,(capeCanvas.width-dw)/2+cropPanX,(capeCanvas.height-dh)/2+cropPanY,dw,dh)}
 function clearCapeCrop(message){cropToken++;cropImg=null;cropDrag=null;cropZoom=1;cropPanX=cropPanY=0;$('#capeZoom').value=1;$('#capeZoom').disabled=true;$('#bCapeApply').disabled=true;$('#bCapeReset').disabled=true;drawCapeCrop();if(message)$('#capeStatus').textContent=message}
 function loadCapeCrop(src,message){const token=++cropToken,img=new Image();img.onload=()=>{if(token!==cropToken)return;cropImg=img;cropZoom=1;cropPanX=cropPanY=0;$('#capeZoom').value=1;$('#capeZoom').disabled=false;$('#bCapeApply').disabled=false;$('#bCapeReset').disabled=false;drawCapeCrop();$('#capeStatus').textContent=message};img.onerror=()=>{if(token===cropToken){clearCapeCrop('Impossible de lire cette image. Essaie un autre fichier.')}};img.src=src}
 function openCapeEditor(){showP('cape');capeExportData=myCape;$('#bCapeDownload').disabled=!capeExportData;$('#bCapeRemove').disabled=!myCape;if(myCape)loadCapeCrop(myCape,'Cape actuelle chargée — tu peux la recadrer ou choisir une autre image.');else clearCapeCrop('Choisis une image pour commencer.')}
-$('#bCape').onclick=openCapeEditor;$('#bCapeFile').onclick=()=>$('#fCape').click();
+$('#bCape').onclick=openCapeEditor;$('#bCapeView').onclick=()=>{const p=prevs[0];if(!p)return;p.yaw=p.yaw>PI/2?.6:PI+.6};$('#bCapeFile').onclick=()=>$('#fCape').click();
 $('#fCape').onchange=e=>{const f=e.target.files?.[0];e.target.value='';if(!f)return;if(f.size>20*1024*1024){$('#capeStatus').textContent='Fichier trop volumineux (maximum 20 Mo).';return}if(f.type&&!f.type.startsWith('image/')){$('#capeStatus').textContent='Choisis un fichier image.';return}clearCapeCrop('Chargement de l’image…');capeExportData=null;$('#bCapeDownload').disabled=true;const reader=new FileReader();reader.onerror=()=>$('#capeStatus').textContent='Impossible de lire ce fichier.';reader.onload=()=>loadCapeCrop(reader.result,'Image prête : glisse-la pour choisir le cadrage.');reader.readAsDataURL(f)};
 function capeCropRect(){const w=cropImg.naturalWidth||cropImg.width,h=cropImg.naturalHeight||cropImg.height,scale=Math.max(capeCanvas.width/w,capeCanvas.height/h)*cropZoom,sw=capeCanvas.width/scale,sh=capeCanvas.height/scale,cx=w/2-cropPanX/scale,cy=h/2-cropPanY/scale;return{sx:cl(cx-sw/2,0,w-sw),sy:cl(cy-sh/2,0,h-sh),sw,sh}}
 function makeCapePng(){if(!cropImg)return null;const r=capeCropRect(),out=document.createElement('canvas');out.width=160;out.height=256;const x=out.getContext('2d');x.imageSmoothingEnabled=true;x.imageSmoothingQuality='high';x.drawImage(cropImg,r.sx,r.sy,r.sw,r.sh,0,0,out.width,out.height);return out.toDataURL('image/png')}

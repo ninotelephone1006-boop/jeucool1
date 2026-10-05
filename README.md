@@ -58,3 +58,5 @@ L'import de modèles `.glb` / `.gltf` / `.obj` a été **retiré** du jeu (plus 
 ## 9. Capes personnalisées
 
 Dans **PERSONNALISER → CRÉER / MODIFIER MA CAPE**, choisis une image (PNG, JPEG, WebP, etc.), glisse-la dans le cadre et règle le zoom pour la recadrer. **Appliquer la cape** l’enregistre en PNG (160 × 256) et la partage aux autres joueurs ; **Télécharger le PNG** exporte le fichier. Le bouton **Retirer la cape** l’efface. La cape reste sur cet appareil pour les prochaines parties.
+
+Une cape se porte dans le dos : l’éditeur affiche sous le recadrage un **aperçu 3D du personnage vu de dos**, qui se met à jour dès qu’une cape est appliquée. Sur l’écran PERSONNALISER, le bouton **🔁 VOIR LA CAPE (FACE / DOS)** retourne l’aperçu principal, et en jeu la touche **F5** (3ᵉ personne) permet de voir sa propre cape.
