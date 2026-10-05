@@ -54,6 +54,9 @@ const world = {
   // `ops` is retained for compatibility with clients from older builds.
   ops: [],
   time: 6000,
+  // Date du dernier /clear map : les sauvegardes navigateur plus anciennes ne
+  // peuvent plus restaurer l'ancienne carte.
+  clearedAt: 0,
   h: new Array(257 * 257).fill(0),
   c: new Array(257 * 257).fill(0)
 };
@@ -84,7 +87,7 @@ function saveWorld() {
   if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
   if (!saveDirty) return;
   const data = {
-    v: 1, savedAt: now(), time: world.time,
+    v: 1, savedAt: now(), time: world.time, clearedAt: world.clearedAt || 0,
     objs: world.objs, tex: world.tex, drops: world.drops, jukes: world.jukes,
     h: world.h.map(v => Math.round((Number(v) || 0) * 100) / 100),
     c: world.c.map(v => clamp(Math.floor(Number(v) || 0), 0, 7))
@@ -110,6 +113,7 @@ function loadWorld() {
     if (s.drops && typeof s.drops === 'object') world.drops = s.drops;
     if (s.jukes && typeof s.jukes === 'object') world.jukes = s.jukes;
     if (Number.isFinite(+s.time)) world.time = clamp(+s.time, 0, 24000);
+    if (Number.isFinite(+s.clearedAt)) world.clearedAt = +s.clearedAt;
     if (Array.isArray(s.h) && s.h.length === GRID) world.h = s.h.map(v => clamp(cleanNum(v), -200, 200));
     if (Array.isArray(s.c) && s.c.length === GRID) world.c = s.c.map(v => clamp(Math.floor(cleanNum(v)), 0, 7));
     console.log(`Monde rechargé depuis ${path.basename(SAVE_FILE)} : ${Object.keys(world.objs).length} objets.`);
@@ -169,6 +173,10 @@ function sanitizeObj(o) {
     tch: o.tch === 0 ? 0 : 1
   };
   if (typeof o.txt === 'string') r.txt = o.txt.slice(0, 56);
+  // 🖼️ Tableau : image PNG posée dessus + taille du cadre (en blocs).
+  if (typeof o.img === 'string') r.img = o.img.slice(0, 220);
+  if (o.pw != null) r.pw = clamp(cleanNum(o.pw, 1), .25, 64);
+  if (o.ph != null) r.ph = clamp(cleanNum(o.ph, 1), .25, 64);
   if (typeof o.code === 'string') r.code = o.code.slice(0, 20000);
   if (Array.isArray(o.items)) r.items = o.items.slice(0, 27).map(sanitizeItem).filter(Boolean);
   if (r.type === 'model' && !r.mdl) return null;
@@ -315,6 +323,11 @@ wss.on('connection', (ws) => {
       // quand le serveur a perdu le monde (redémarrage, mise en veille…).
       // Acceptée uniquement si le serveur n'a vraiment plus rien.
       if (!worldEmpty()) return;
+      if (world.clearedAt && Number.isFinite(+m.ts) && +m.ts < world.clearedAt) {
+        console.log('Restauration refusée : la carte a été remise à zéro depuis cette sauvegarde.');
+        send(ws, { t: 'chat', id: null, n: 'Serveur', m: '🗺️ La carte a été remise à zéro : la sauvegarde de ton navigateur (plus ancienne) n’a pas été restaurée.' });
+        return;
+      }
       const h = Array.isArray(m.h) && m.h.length === GRID ? m.h.map(v => clamp(cleanNum(v), -200, 200)) : null;
       const c = Array.isArray(m.c) && m.c.length === GRID ? m.c.map(v => clamp(Math.floor(cleanNum(v)), 0, 7)) : null;
       const objs = {};
@@ -345,6 +358,25 @@ wss.on('connection', (ws) => {
       markDirty();
       console.log(`Monde restauré par un client : ${Object.keys(objs).length} objets, ${Object.keys(tex).length} textures.`);
       broadcast({ t: 'world', objs: world.objs, tex: world.tex, drops: world.drops, jukes: world.jukes, h: world.h, c: world.c, time: world.time }, ws);
+      return;
+    }
+
+    if (m.t === 'clear') {
+      // /clear map : tout le monde repart de la carte par défaut (terrain plat,
+      // plus aucun objet, texture, disque ni objet au sol).
+      world.h = new Array(GRID).fill(0);
+      world.c = new Array(GRID).fill(0);
+      world.objs = {};
+      world.tex = {};
+      world.drops = {};
+      world.jukes = {};
+      world.ops.length = 0;
+      world.time = 6000;
+      world.clearedAt = Date.now();
+      markDirty();
+      saveWorld();
+      broadcastAll({ t: 'clear' });
+      console.log(`Carte réinitialisée par ${me.name} (/clear map).`);
       return;
     }
 
@@ -397,6 +429,9 @@ wss.on('connection', (ws) => {
       if (typeof p.txt === 'string') patch.txt = p.txt.slice(0, 56);
       if (typeof p.code === 'string') patch.code = p.code.slice(0, 20000);
       if (Array.isArray(p.items)) patch.items = p.items.slice(0, 27).map(sanitizeItem).filter(Boolean);
+      // 🖼️ Tableau : changement d'image et de taille de cadre.
+      if (typeof p.img === 'string' || p.img === null) patch.img = typeof p.img === 'string' ? p.img.slice(0, 220) : null;
+      for (const k of ['pw', 'ph']) if (k in p) patch[k] = clamp(cleanNum(p[k], 1), .25, 64);
       Object.assign(target, patch);
       markDirty();
       broadcastAll({ t: 'upd', id: m.id, p: patch });
