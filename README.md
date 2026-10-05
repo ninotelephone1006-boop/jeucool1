@@ -16,13 +16,13 @@ Le serveur doit être accessible en HTTPS/WSS, par exemple :
 `wss://mon-serveur.example.com`
 
 ## 2. Mettre l'URL dans le jeu
-Dans `index.html`, cherche :
+Le jeu utilise `wss://jeucool1.onrender.com` par défaut. Pour utiliser un autre serveur, définis `window.COMMUNITY_WORLD_WS` avant le script du jeu dans `index.html` :
 
-```js
-const WS_SERVER = window.COMMUNITY_WORLD_WS || 'wss://TON-SERVEUR-WEBSOCKET.example';
+```html
+<script>window.COMMUNITY_WORLD_WS = 'wss://mon-serveur.example.com';</script>
 ```
 
-et remplace l'adresse par celle fournie par ton hébergeur.
+Le serveur doit accepter les connexions WebSocket depuis le site qui héberge `index.html`.
 
 ## 3. GitHub Pages
 Mets `index.html` à la racine du dépôt GitHub et active GitHub Pages.
