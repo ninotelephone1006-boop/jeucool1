@@ -5,6 +5,9 @@ const { WebSocketServer } = require('ws');
 
 const PORT = process.env.PORT || 10000;
 const MAX_AUDIO_CHARS = 20 * 1024 * 1024;
+const MAX_MODEL_BYTES = 100 * 1024 * 1024;
+// Models are sent as data URLs, so base64 adds roughly one third to the file size.
+const MAX_MODEL_DATA_CHARS = Math.ceil(MAX_MODEL_BYTES / 3) * 4 + 128;
 const MAX_TEX_CHARS = 30 * 1024 * 1024;
 const MAX_RESTORE_TEX_CHARS = 24 * 1024 * 1024;
 const GRID = 257 * 257;
@@ -36,7 +39,8 @@ const server = http.createServer((req, res) => {
   res.end('COMMUNITY WORLD WebSocket server is running.');
 });
 
-const wss = new WebSocketServer({ server, maxPayload: 50 * 1024 * 1024 });
+// Allow the JSON WebSocket message carrying a 100 MiB model's base64 data URL.
+const wss = new WebSocketServer({ server, maxPayload: MAX_MODEL_DATA_CHARS + 1024 });
 let nextId = 1;
 const players = new Map();
 const world = {
@@ -347,7 +351,8 @@ wss.on('connection', (ws) => {
 
     if (m.t === 'tex') {
       if (typeof m.id !== 'string' || typeof m.d !== 'string') return;
-      if (m.id.length > 220 || m.d.length > MAX_TEX_CHARS) return;
+      const maxDataChars = m.id.startsWith('m:') ? MAX_MODEL_DATA_CHARS : MAX_TEX_CHARS;
+      if (m.id.length > 220 || m.d.length > maxDataChars) return;
       world.tex[m.id] = m.d;
       markDirty();
       broadcastAll({ t: 'tex', id: m.id, d: m.d });
