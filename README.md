@@ -61,7 +61,19 @@ Dans **PERSONNALISER → CRÉER / MODIFIER MA CAPE**, choisis une image (PNG, JP
 
 Une cape se porte dans le dos : l’éditeur affiche sous le recadrage un **aperçu 3D du personnage vu de dos**, qui se met à jour dès qu’une cape est appliquée. Sur l’écran PERSONNALISER, le bouton **🔁 VOIR LA CAPE (FACE / DOS)** retourne l’aperçu principal, et en jeu la touche **F5** (3ᵉ personne) permet de voir sa propre cape.
 
-## 10. Effets sonores
+## 10. Le coffre (comme dans Minecraft)
+
+Le **coffre** est un bloc de **27 emplacements** (3 rangées de 9) :
+
+- **Clic droit** sur un coffre : il s'ouvre. Le couvercle s'anime, le son d'ouverture est joué, et **les autres joueurs voient le couvercle ouvert** tant qu'il reste quelqu'un devant le coffre (il se referme tout seul si le dernier joueur s'éloigne, ferme l'inventaire ou se déconnecte).
+- **Le contenu est sauvegardé** : chaque objet reste exactement dans sa case (le serveur écrit le coffre dans `world-save.json`, le navigateur en garde aussi une copie dans `localStorage`). Si deux joueurs ont le coffre ouvert en même temps, les cases se mettent à jour en direct chez tout le monde.
+- **Casser un coffre** (ou le supprimer en mode build) fait tomber au sol **le bloc et tout son contenu**, comme dans Minecraft.
+- **Fermer un coffre** : Échap, ou s'éloigner de plus de 16 m.
+- **Maj + clic** sur une case : transfert rapide de la pile entre le coffre et l'inventaire (dans les deux sens).
+- **Obtenir un coffre** : en survie, le bouton **🔨 Fabriquer un coffre** apparaît dans l'inventaire dès que tu as **8 planches** (ou 8 bois) ; en créatif, le coffre est dans la liste d'objets (catégorie **🧱 Blocs**) et dans la bibliothèque du **mode build**.
+- Le coffre se pose **sur la grille**, sans rotation, et ne peut pas être posé à l'intérieur d'un joueur ou d'un autre bloc.
+
+## 11. Effets sonores
 
 Les fichiers du dossier `Sounds/` sont utilisés par le jeu :
 

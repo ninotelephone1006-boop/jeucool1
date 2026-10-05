@@ -126,7 +126,11 @@ function loadWorld() {
   catch (e) { if (e.code !== 'ENOENT') console.warn('Sauvegarde illisible :', e.message); return; }
   try {
     const s = JSON.parse(raw);
-    if (s.objs && typeof s.objs === 'object') world.objs = s.objs;
+    if (s.objs && typeof s.objs === 'object') {
+      world.objs = s.objs;
+      // Les coffres d'une ancienne sauvegarde reviennent avec leurs 27 cases.
+      for (const o of Object.values(world.objs)) if (o && Array.isArray(o.items)) o.items = sanitizeItems(o.items);
+    }
     if (s.tex && typeof s.tex === 'object') world.tex = s.tex;
     if (s.drops && typeof s.drops === 'object') world.drops = s.drops;
     if (s.jukes && typeof s.jukes === 'object') world.jukes = s.jukes;
@@ -151,6 +155,29 @@ function broadcastAll(msg) {
   const data = JSON.stringify(msg);
   for (const p of players.values()) if (p.ws.readyState === 1) p.ws.send(data);
 }
+// ---------- Coffres ouverts (comme dans Minecraft) ----------
+// Le couvercle d'un coffre s'ouvre pour tout le monde : on compte les joueurs
+// qui l'ont ouvert et on prévient les autres quand l'état change. Cet état est
+// purement visuel, il n'est jamais écrit dans la sauvegarde du monde.
+const chestWatchers = new Map(); // id du coffre -> Set des joueurs qui l'ont ouvert
+function setChestOpen(pid, cid, open) {
+  const set = chestWatchers.get(cid);
+  if (open) {
+    if (set && set.has(pid)) return;
+    const s = set || new Set();
+    const first = s.size === 0;
+    s.add(pid);
+    chestWatchers.set(cid, s);
+    if (first && world.objs[cid]) broadcastAll({ t: 'upd', id: cid, p: { chOpen: 1 } });
+  } else {
+    if (!set || !set.has(pid)) return;
+    set.delete(pid);
+    const last = set.size === 0;
+    if (last) chestWatchers.delete(cid);
+    if (last && world.objs[cid]) broadcastAll({ t: 'upd', id: cid, p: { chOpen: 0 } });
+  }
+}
+function forgetChest(cid) { chestWatchers.delete(cid); }
 function cleanName(v) { return String(v || 'Joueur').replace(/[\u0000-\u001f]/g, '').slice(0, 16) || 'Joueur'; }
 function cleanNum(v, d = 0) { const n = Number(v); return Number.isFinite(n) ? n : d; }
 function cleanVec(v, d = [0, 0, 0]) {
@@ -175,6 +202,17 @@ function sanitizeItem(it) {
   }
   return out;
 }
+// Un coffre garde ses 27 emplacements : les cases vides restent vides (null)
+// au lieu d'être supprimées, sinon les objets seraient tassés vers la gauche
+// et changeraient de case à chaque sauvegarde. Comme dans Minecraft, chaque
+// objet reste exactement dans la case où on l'a rangé.
+const CHEST_SLOTS = 27;
+function sanitizeItems(arr) {
+  const out = new Array(CHEST_SLOTS).fill(null);
+  if (!Array.isArray(arr)) return out;
+  for (let i = 0; i < CHEST_SLOTS; i++) out[i] = arr[i] ? sanitizeItem(arr[i]) : null;
+  return out;
+}
 function sanitizeObj(o) {
   if (!o || typeof o.type !== 'string') return null;
   const r = {
@@ -191,7 +229,7 @@ function sanitizeObj(o) {
   };
   if (typeof o.txt === 'string') r.txt = o.txt.slice(0, 56);
   if (typeof o.code === 'string') r.code = o.code.slice(0, 20000);
-  if (Array.isArray(o.items)) r.items = o.items.slice(0, 27).map(sanitizeItem).filter(Boolean);
+  if (Array.isArray(o.items)) r.items = sanitizeItems(o.items);
   if (r.type === 'model' && !r.mdl) return null;
   return r;
 }
@@ -211,6 +249,16 @@ function spawnDrop(owner, item, p, v) {
   markDirty();
   broadcastAll({ t: 'drop', d });
   return d;
+}
+// Casser ou supprimer un coffre libère tout ce qu'il contenait : les objets
+// tombent au sol autour du coffre, exactement comme dans Minecraft.
+function spillChest(owner, o) {
+  if (!o || o.type !== 'coffre' || !Array.isArray(o.items)) return;
+  for (const item of o.items) {
+    if (!item) continue;
+    if (Object.keys(world.drops).length >= 2000) break;
+    spawnDrop(owner, item, [o.p[0], o.p[1] + .7, o.p[2]], [(Math.random() - .5) * 1.4, 2.4, (Math.random() - .5) * 1.4]);
+  }
 }
 
 // Keep the same bilinear terrain heightmap as the browser simulation.
@@ -410,6 +458,16 @@ wss.on('connection', (ws) => {
       const p = m.p && typeof m.p === 'object' ? m.p : {};
       const patch = {};
       const target = world.objs[m.id];
+      // Ouverture/fermeture du couvercle : état partagé pour tous les joueurs,
+      // jamais écrit dans l'objet sauvegardé (donc jamais « coincé » ouvert).
+      const lid = 'chOpen' in p;
+      if (lid) {
+        if (p.chOpen) {
+          if (me.chest && me.chest !== m.id) setChestOpen(id, me.chest, false);
+          me.chest = m.id;
+        } else if (me.chest === m.id) me.chest = null;
+        setChestOpen(id, m.id, !!p.chOpen);
+      }
       if (Array.isArray(p.p)) patch.p = cleanVec(p.p, target.p);
       if (Array.isArray(p.r)) patch.r = cleanVec(p.r, target.r);
       if (Array.isArray(p.s)) patch.s = cleanVec(p.s, target.s).map(v => clamp(v, .02, 100));
@@ -418,7 +476,8 @@ wss.on('connection', (ws) => {
       if (typeof p.tex === 'string' || p.tex === null) patch.tex = p.tex;
       if (typeof p.txt === 'string') patch.txt = p.txt.slice(0, 56);
       if (typeof p.code === 'string') patch.code = p.code.slice(0, 20000);
-      if (Array.isArray(p.items)) patch.items = p.items.slice(0, 27).map(sanitizeItem).filter(Boolean);
+      if (Array.isArray(p.items)) patch.items = sanitizeItems(p.items);
+      if (lid && !Object.keys(patch).length) return;
       Object.assign(target, patch);
       markDirty();
       broadcastAll({ t: 'upd', id: m.id, p: patch });
@@ -430,6 +489,8 @@ wss.on('connection', (ws) => {
       if (distance(me.s || {}, o.p) > reach) return;
       const prevJuke = o.type === 'jukebox' ? world.jukes[m.id] : null;
       delete world.objs[m.id];
+      forgetChest(m.id);
+      spillChest(id, o);
       if (o.type === 'jukebox' && world.jukes[m.id]) {
         delete world.jukes[m.id];
         broadcastAll({ t: 'juke', id: m.id, stop: 1, from: id });
@@ -465,6 +526,8 @@ wss.on('connection', (ws) => {
       const gone = world.objs[m.id];
       const prevJuke = gone.type === 'jukebox' ? world.jukes[m.id] : null;
       delete world.objs[m.id];
+      forgetChest(m.id);
+      spillChest(id, gone);
       if (world.jukes[m.id]) {
         delete world.jukes[m.id];
         broadcastAll({ t: 'juke', id: m.id, stop: 1, from: id });
@@ -501,6 +564,7 @@ wss.on('connection', (ws) => {
 
   ws.on('close', () => {
     if (!me) return;
+    if (me.chest) setChestOpen(id, me.chest, false);
     players.delete(id);
     broadcast({ t: 'leave', id });
     // Plus personne : on écrit la carte sur le disque tout de suite.
