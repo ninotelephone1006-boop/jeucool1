@@ -673,11 +673,16 @@ sc.add(cam);
 function mkRemote(p){if(!p||p.id==null)return;if(RM[p.id]){sc.remove(RM[p.id].c.g);delete RM[p.id]}const c=mkChar(basicSkin||defSkin(0));if(p.skin)loadSkin(p.skin).then(x=>{c.setSkin(x);c.hasSkin=true});if(p.cape)c.setCape(p.cape);c.g.add(tag(p.name));sc.add(c.g);const s=p.s||{x:0,y:0,z:0,ry:0};c.g.position.set(s.x||0,s.y||0,s.z||0);RM[p.id]={c,tg:s,la:s.atk||0,nm:p.name};if(p.eyes){c.eye=p.eyes;eyeDraw(c,0)}}
 function join(){send({t:'join',name:$('#nm').value||'Joueur',skin:localStorage.skin,cape:localStorage.getItem('cape'),eyes:eyeCfg})}
 function startLocal(){ws=localWS();ws.onmessage=onMsg;$('#msg').textContent='Mode local : monde sauvegardé dans ce navigateur (onglets synchronisés).';join()}
-function connect(){$('#msg').textContent='';if(!location.host||location.protocol==='file:')return startLocal();
+function connect(){if(!location.host||location.protocol==='file:')return startLocal();
+ $('#msg').textContent='Connexion au monde…';
  const url=window.COMMUNITY_WORLD_WS||'wss://jeucool1.onrender.com';let sock;try{sock=new WebSocket(url)}catch(e){return startLocal()}ws=sock;
- const timer=setTimeout(()=>{if(ws===sock&&sock.readyState!==1&&mode!=='play'){ws=null;try{sock.close()}catch(e){}startLocal()}},8000);
- sock.onerror=()=>{if(ws===sock&&mode!=='play'){clearTimeout(timer);ws=null;try{sock.close()}catch(e){}startLocal()}};
- sock.onopen=()=>{clearTimeout(timer);if(ws===sock)join()};sock.onclose=()=>{clearTimeout(timer);if(ws!==sock)return;ws=null;if(mode==='play')quit();else startLocal()};sock.onmessage=e=>{if(ws===sock)onMsg(e)}}
+ let connectTimer,initTimer;
+ const startOffline=()=>{if(ws!==sock||mode==='play')return;clearTimeout(connectTimer);clearTimeout(initTimer);ws=null;try{sock.close()}catch(e){}startLocal()};
+ connectTimer=setTimeout(()=>{if(ws===sock&&sock.readyState!==1&&mode!=='play')startOffline()},8000);
+ sock.onerror=()=>{if(ws===sock&&mode!=='play')startOffline()};
+ sock.onopen=()=>{clearTimeout(connectTimer);if(ws!==sock)return;$('#msg').textContent='Serveur connecté, chargement du monde…';initTimer=setTimeout(startOffline,45000);join()};
+ sock.onclose=()=>{clearTimeout(connectTimer);clearTimeout(initTimer);if(ws!==sock)return;ws=null;if(mode==='play')quit();else startLocal()};
+ sock.onmessage=e=>{if(ws!==sock)return;onMsg(e);if(mode==='play'){clearTimeout(initTimer);$('#msg').textContent=''}}}
 function localWS(){const K='cw_world';let W;try{W=JSON.parse(localStorage[K]||'null')}catch(e){W=null}W=W||{};W.objs=W.objs||{};W.tex=W.tex||{};W.drops=W.drops||{};W.jukes=W.jukes||{};if(W.h){T.h.set(W.h);T.c.set(W.c||[])}
  let st=0;const save=()=>{clearTimeout(st);st=setTimeout(()=>{try{localStorage[K]=JSON.stringify({objs:W.objs,tex:W.tex,drops:W.drops,h:Array.from(T.h,v=>Math.round(v*100)/100),c:Array.from(T.c)})}catch(e){log('Sauvegarde impossible (quota navigateur).')}},1200)};
  const ch=new BroadcastChannel('cw'),id=`local:${Date.now().toString(36)}:${Math.random().toString(36).slice(2,8)}`;let self=null;
