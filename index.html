@@ -547,10 +547,6 @@ function addObj(o){if(o.type!=='model'&&!LF[o.type])return;rmObj(o.id);const g=o
 function setVis(b){const o=b.o;b.g.visible=o.vis!==0||build;if(o.type==='model')return;b.g.children.filter(m=>m.name!=='txt').forEach(m=>{m.material.transparent=o.vis===0||m.userData.c===gl;m.material.opacity=o.vis===0?.25:(m.userData.c===gl?.55:1);m.material.needsUpdate=true})}
 function applyObj(id,fast){const b=OB[id];if(!b)return;const{o,g}=b;g.position.set(...o.p);g.rotation.set(...o.r);g.scale.set(...o.s);g.updateMatrixWorld(true);b.bx=new THREE.Box3().setFromObject(g);if(!fast){setVis(b);setTex(g,o);signTxt(b)}}
 function rmObj(id){const b=OB[id];if(b){og.remove(b.g);delete OB[id];if(selId==id)selId=null}}
-// Serveur multijoueur.
-// Sur GitHub Pages, le jeu est en HTTPS : il faut donc un serveur WebSocket HTTPS sécurisé (wss://).
-// Remplace l'URL ci-dessous par l'URL de ton serveur WebSocket.
-// Exemple : window.COMMUNITY_WORLD_WS='wss://mon-jeu.onrender.com';
 // ---------- réseau
 let ws=null,myId=0,mode='menu',paused=false,build=false,pendSel=0;const RM={};
 const send=o=>ws&&ws.readyState===1&&ws.send(JSON.stringify(o));
@@ -559,8 +555,7 @@ function mkRemote(p){if(RM[p.id]){sc.remove(RM[p.id].c.g);delete RM[p.id]}const 
 function join(){send({t:'join',name:$('#nm').value||'Joueur',skin:localStorage.skin,eyes:eyeCfg})}
 function startLocal(){ws=localWS();ws.onmessage=onMsg;$('#msg').textContent='Mode local : monde sauvegardé dans ce navigateur (onglets synchronisés).';join()}
 function connect(){$('#msg').textContent='';if(!location.host||location.protocol==='file:')return startLocal();
- const WS_SERVER = window.COMMUNITY_WORLD_WS || 'wss://TON-SERVEUR-WEBSOCKET.example';
- ws=new WebSocket(WS_SERVER);ws.onerror=()=>{if(mode!=='play'){ws=null;startLocal()}};
+ ws=new WebSocket('wss://jeucool1.onrender.com');ws.onerror=()=>{if(mode!=='play'){ws=null;startLocal()}};
  ws.onopen=join;ws.onclose=()=>{if(mode==='play')quit()};ws.onmessage=onMsg}
 function localWS(){const K='cw_world',W=JSON.parse(localStorage[K]||'null')||{objs:{},tex:{}};if(W.h){T.h.set(W.h);T.c.set(W.c)}
  let st=0;const save=()=>{clearTimeout(st);st=setTimeout(()=>{try{localStorage[K]=JSON.stringify({objs:W.objs,tex:W.tex,h:Array.from(T.h,v=>Math.round(v*100)/100),c:Array.from(T.c)})}catch(e){log('Sauvegarde impossible (quota navigateur).')}},1200)};
