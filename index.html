@@ -12,6 +12,7 @@ canvas#c{position:fixed;inset:0;width:100%;height:100%;filter:contrast(1.1) satu
 .p{position:fixed;background:#0009;backdrop-filter:blur(6px);border-radius:12px;padding:14px;transition:opacity .35s,transform .35s}
 .hid{opacity:0;pointer-events:none;transform:scale(.96)}
 #menu,#cust,#opts{inset:0;margin:auto;width:340px;height:fit-content;text-align:center}
+#cust{max-height:96vh;overflow:auto}
 #menu h1{letter-spacing:6px;margin:6px 0 18px}
 button,select,input[type=text]{font:inherit;color:#fff;background:#3a4a6b;border:0;border-radius:8px;padding:9px 12px;margin:3px;cursor:pointer}
 button:hover{background:#5870a8}button.on{background:#e8a12e;color:#000}
@@ -51,6 +52,13 @@ canvas#c{transition:filter 1.4s}
 #mic{left:10px;bottom:10px;padding:6px 12px;font-size:13px;display:none;cursor:pointer}
 #mic.talk{background:#1d7a34dd;box-shadow:0 0 12px #5f5}#mic.off{background:#7a1d1ddd}
 #voice{inset:0;margin:auto;width:390px;max-height:96vh;overflow:auto;height:fit-content;text-align:center}
+#cape{inset:0;margin:auto;width:min(420px,94vw);max-height:96vh;overflow:auto;height:fit-content;text-align:center}
+#cape h2{margin:4px 0 8px}
+#capeCrop{display:block;width:min(240px,70vw);height:auto;max-height:42vh;margin:10px auto;background-color:#fff;background-image:linear-gradient(45deg,#bbb 25%,transparent 25%),linear-gradient(-45deg,#bbb 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#bbb 75%),linear-gradient(-45deg,transparent 75%,#bbb 75%);background-size:20px 20px;background-position:0 0,0 10px,10px -10px,-10px 0;border:2px solid #ffffff99;border-radius:8px;touch-action:none;cursor:grab}
+#capeCrop:active{cursor:grabbing}
+#cape .g{justify-content:center}
+#capeStatus{min-height:18px;margin:5px 0}
+button:disabled{opacity:.45;cursor:not-allowed}
 #voice h3{margin:10px 0 2px;text-align:left}
 #vmeter{height:10px;background:#000a;border-radius:5px;position:relative;margin:4px 0 10px;overflow:hidden}
 #vmeter i{display:block;height:100%;width:0;background:linear-gradient(90deg,#4f4,#fe4 70%,#f44)}
@@ -64,9 +72,19 @@ canvas#c{transition:filter 1.4s}
 <canvas id="c"></canvas>
 <div id="menu" class="p"><h1>COMMUNITY WORLD</h1><input type="text" id="nm" maxlength="16" placeholder="Pseudo" style="width:100%;margin:0 0 8px;cursor:text">
 <button id="bPlay">JOUER</button><button id="bCust">PERSONNALISER</button><button id="bEyes">👁 YEUX &amp; PAUPIÈRES</button><button id="bVoice">🎤 CHAT VOCAL &amp; BOUCHE</button><button id="bOpts">PARAMÈTRES</button><button id="bQuit">QUITTER</button><div id="msg" style="font-size:12px;margin-top:8px;color:#fc8">Chargement…</div></div>
-<div id="cust" class="p hid"><h2>PERSONNALISATION</h2><canvas id="pv1" class="pv" width="260" height="320"></canvas>
+<div id="cust" class="p hid"><h2>PERSONNALISATION</h2><canvas id="pv1" class="pv" width="260" height="320"></canvas><div class="hint">Glisse l’aperçu pour tourner le personnage et voir sa cape.</div>
 <button id="bSkin">IMPORTER UN SKIN (PNG 64×64)</button><input type="file" id="fSkin" accept="image/png" hidden>
+<button id="bCape">🧥 CRÉER / MODIFIER MA CAPE</button><div id="capeStatusMini" class="hint"></div>
 <div id="presets"></div><button class="back">RETOUR</button></div>
+<div id="cape" class="p hid"><h2>🧥 MA CAPE</h2>
+<div class="hint">Choisis une image, puis glisse-la pour la recadrer. Utilise le zoom pour ajuster l’image au format de la cape.</div>
+<button id="bCapeFile">📁 Choisir une image</button><input type="file" id="fCape" accept="image/*" hidden>
+<canvas id="capeCrop" width="240" height="384" aria-label="Recadrage de l’image de la cape"></canvas>
+<label>Zoom<input type="range" id="capeZoom" min="1" max="4" step="0.01" value="1" disabled></label>
+<div class="g"><button id="bCapeReset" disabled>↺ Réinitialiser le recadrage</button><button id="bCapeApply" disabled>✅ Appliquer la cape</button></div>
+<div id="capeStatus" class="hint" role="status">Choisis une image pour commencer.</div>
+<div class="g"><button id="bCapeDownload" disabled>⬇ Télécharger le PNG</button><button id="bCapeRemove">🗑 Retirer la cape</button><button id="bCapeBack">RETOUR</button></div>
+</div>
 <div id="opts" class="p hid"><h2>PARAMÈTRES</h2><div id="optl"></div><label>Qualité <select id="oq"><option value="0">Basse</option><option value="1">Moyenne</option><option value="2">Haute</option></select></label>
 <div style="font-size:12px">Touches : ZQSD, Espace, Maj, Ctrl, E, T, A, V (parler), M (micro), C (zoom : maintiens et roule la molette pour régler), F5 (1<sup>re</sup> / 3<sup>e</sup> personne)</div><button class="back">RETOUR</button></div>
 <div id="hot" class="p"></div>
@@ -284,9 +302,10 @@ function mkChar(cv){const tex=new THREE.CanvasTexture(cv);tex.magFilter=THREE.Ne
  torso.add(part(8,12,4,[16,16],[16,32],6));const head=G(0,12,0);torso.add(head);
  const armR=G(-6,10,0,part(4,12,4,[40,16],[40,32],-4)),armL=G(6,10,0,part(4,12,4,[32,48],[48,48],-4));torso.add(armR,armL);
  const legR=G(-2,0,0,part(4,12,4,[0,16],[0,32],-6)),legL=G(2,0,0,part(4,12,4,[16,48],[0,48],-6));hips.add(legR,legL);
+ const capePivot=G(0,11,-3),capeMat=new THREE.MeshStandardMaterial({roughness:1,transparent:true,alphaTest:.03,side:THREE.DoubleSide}),capeMesh=new THREE.Mesh(new THREE.PlaneGeometry(10*S,16*S,2,8),capeMat);capeMesh.position.y=-8*S;capeMesh.rotation.y=PI;capeMesh.visible=false;capeMesh.castShadow=true;capeMesh.receiveShadow=true;capePivot.add(capeMesh);torso.add(capePivot);
  const wm=new THREE.MeshStandardMaterial({color:'#8a8aa8',roughness:1,side:THREE.DoubleSide}),mkWing=sx=>{const g=G(sx,10,-2.6),m=new THREE.Mesh(new THREE.BoxGeometry(12*S,20*S,.6*S),wm);m.position.set(sx*6*S,-8*S,0);m.castShadow=true;g.add(m);return g},wL=mkWing(1),wR=mkWing(-1);wL.visible=wR.visible=false;torso.add(wL,wR);
  const held=new THREE.Mesh(new THREE.BoxGeometry(.12,.12,.45),new THREE.MeshStandardMaterial());held.position.set(0,-10*S,.2);held.visible=false;armR.add(held);
- const c={g:root,hips,torso,head,armR,armL,legR,legL,held,wL,wR,wing:0,ph:Math.random()*6,m:{amp:0,run:0,air:0,up:0,gl:0,fl:0,sn:0,ld:0,wg:0,si:0},st:{sp:0,sn:0,air:0,vy:0,atk:0,use:0,land:0,fly:0,gl:0,si:0},tex,base:cv,eye:null,bt:3,cl:0,setSkin(cv){c.base=cv;tex.image=cv;tex.needsUpdate=true;if(c.eye)eyeDraw(c,c.cl)}};c.ml=3;c.mo=0;c.mv=0;c.amp=2.5;c.mh=mkHead(head,mb,mo,3);c.setML=l=>{l=cl(Math.round(l)||3,1,7);if(l!==c.ml){c.ml=l;c.mh=mkHead(head,mb,mo,l)}};allC.push(c);return c}
+ let capeToken=0;const c={g:root,hips,torso,head,armR,armL,legR,legL,held,wL,wR,capePivot,capeMesh,capeMat,wing:0,ph:Math.random()*6,m:{amp:0,run:0,air:0,up:0,gl:0,fl:0,sn:0,ld:0,wg:0,si:0},st:{sp:0,sn:0,air:0,vy:0,atk:0,use:0,land:0,fly:0,gl:0,si:0},tex,base:cv,eye:null,bt:3,cl:0,setSkin(cv){c.base=cv;tex.image=cv;tex.needsUpdate=true;if(c.eye)eyeDraw(c,c.cl)},setCape(data){const token=++capeToken;if(!data){const old=capeMat.map;capeMat.map=null;capeMat.needsUpdate=true;capeMesh.visible=false;old?.dispose();return}if(typeof data!=='string'||!data.startsWith('data:image/')||data.length>600_000)return;const image=new Image();image.onload=()=>{if(token!==capeToken)return;const t=new THREE.Texture(image);t.colorSpace=THREE.SRGBColorSpace;t.magFilter=THREE.LinearFilter;t.needsUpdate=true;const old=capeMat.map;capeMat.map=t;capeMat.needsUpdate=true;capeMesh.visible=true;old?.dispose()};image.src=data}};c.ml=3;c.mo=0;c.mv=0;c.amp=2.5;c.mh=mkHead(head,mb,mo,3);c.setML=l=>{l=cl(Math.round(l)||3,1,7);if(l!==c.ml){c.ml=l;c.mh=mkHead(head,mb,mo,l)}};allC.push(c);return c}
 const LEG=12*S,Lr=(x,y,t)=>x+(y-x)*t,dEase=t=>{const a=1.4,b=a+1;return 1+b*Math.pow(t-1,3)+a*Math.pow(t-1,2)};
 // ---- bouche : la tête est coupée en deux (crâne + mâchoire) au niveau choisi
 const MDK=new THREE.MeshStandardMaterial({color:'#2b0b12',roughness:1}),MHID=new THREE.MeshBasicMaterial({visible:false});
@@ -331,13 +350,13 @@ function anim(c,dt,tm){blink(c,dt);mouth(c,dt);const s=c.st,m=c.m,K=r=>1-Math.ex
  c.torso.rotation.set(lean,twist,roll);c.hips.rotation.x=pitch;c.hips.position.y=LEG-drop-crouch+idle*br*.004;if(dk)c.hips.position.y=Lr(c.hips.position.y,3*S,dk);
  c.head.rotation.set(headX-lean*.5,0,0);
  // ailes d'élytres (dépliées en vol plané)
- const wv=m.wg>.02;c.wL.visible=c.wR.visible=wv;if(wv){const o=m.gl,sc_=Lr(.3,1,o);c.wL.rotation.set(0,.7*o,.25*o);c.wR.rotation.set(0,-.7*o,-.25*o);c.wL.scale.x=c.wR.scale.x=sc_}}
+ const wv=m.wg>.02;c.wL.visible=c.wR.visible=wv;if(wv){const o=m.gl,sc_=Lr(.3,1,o);c.wL.rotation.set(0,.7*o,.25*o);c.wR.rotation.set(0,-.7*o,-.25*o);c.wL.scale.x=c.wR.scale.x=sc_}c.capePivot.rotation.x=.08+m.amp*.08+m.run*.1+m.gl*.55+m.fl*.28+Math.sin(tm*3+c.ph)*(.015+m.amp*.02);c.capePivot.rotation.z=Math.sin(c.ph*.5)*m.amp*.025}
 function tag(n){const c=document.createElement('canvas');c.width=256;c.height=48;const x=c.getContext('2d');x.font='bold 28px sans-serif';x.textAlign='center';x.fillStyle='#0008';x.fillRect(0,0,256,48);x.fillStyle='#fff';x.fillText(n,128,34);const s=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),depthTest:false}));s.scale.set(1.6,.3,1);s.position.y=2.1;return s}
 const turn=(a,b,k)=>a+(((b-a+PI)%(2*PI)+2*PI)%(2*PI)-PI)*k;
 // ---------- aperçus 3D
-let myCv=defSkin(0);if(localStorage.skin)loadSkin(localStorage.skin).then(c=>{myCv=c;allC.forEach(x=>x.setSkin(c))});
+let myCv=defSkin(0),myCape=localStorage.getItem('cape')||null;if(localStorage.skin)loadSkin(localStorage.skin).then(c=>{myCv=c;allC.forEach(x=>x.setSkin(c))});
 const prevs=[];function mkPrev(el){const r=new THREE.WebGLRenderer({canvas:el,alpha:true,antialias:true}),s=new THREE.Scene(),c=new THREE.PerspectiveCamera(30,el.width/el.height,.1,50);c.position.set(0,1,5.6);c.lookAt(0,.9,0);
- s.add(new THREE.HemisphereLight(0xffffff,0x999999,2.4));const ch=mkChar(myCv);s.add(ch.g);r.setPixelRatio(1);r.setSize(el.width,el.height,false);const o={el,r,s,c,ch,yaw:.6,d:0};
+ s.add(new THREE.HemisphereLight(0xffffff,0x999999,2.4));const ch=mkChar(myCv);if(myCape)ch.setCape(myCape);s.add(ch.g);r.setPixelRatio(1);r.setSize(el.width,el.height,false);const o={el,r,s,c,ch,yaw:.6,d:0};
  el.onpointerdown=e=>{o.d=1;el.setPointerCapture(e.pointerId)};el.onpointerup=()=>o.d=0;el.onpointermove=e=>{if(o.d)o.yaw+=e.movementX*.012};prevs.push(o)}
 mkPrev($('#pv1'));mkPrev($('#pv2'));mkPrev($('#pv3'));{const p=prevs.at(-1);p.yaw=0;p.c.position.set(0,1.58,1.5);p.c.lookAt(0,1.55,0)}mkPrev($('#pv4'));{const p=prevs.at(-1);p.yaw=.55;p.c.position.set(0,1.6,1.75);p.c.lookAt(0,1.57,0)}
 // ---------- bibliothèque d'objets
@@ -565,20 +584,11 @@ function rmObj(id){const b=OB[id];if(b){og.remove(b.g);delete OB[id];if(selId!=n
 // ---------- réseau
 let ws=null,myId=0,mode='menu',paused=false,build=false,pendSel=0;const RM={};
 const send=o=>ws&&ws.readyState===1&&ws.send(JSON.stringify(o));
-const me={pos:new THREE.Vector3(0,0,0),v:new THREE.Vector3(),ry:0,vy:0,c:mkChar(myCv),atkc:0,eye:1.55};sc.add(me.c.g);
-// ========== MAIN PREMIÈRE PERSONNE (STYLE MINECRAFT) ==========
+const me={pos:new THREE.Vector3(0,0,0),v:new THREE.Vector3(),ry:0,vy:0,c:mkChar(myCv),atkc:0,eye:1.55};if(myCape)me.c.setCape(myCape);sc.add(me.c.g);
+// La première personne n'ajoute aucun mesh de bras à la caméra.
 sc.add(cam);
-const fpArmGrp=new THREE.Group();cam.add(fpArmGrp);fpArmGrp.visible=false;
-const fpArm=new THREE.Group();fpArm.position.set(.32,-.28,-.42);
-const _fpMB=new THREE.MeshStandardMaterial({map:me.c.tex,roughness:1,depthTest:false,depthWrite:false});
-const _fpMO=new THREE.MeshStandardMaterial({map:me.c.tex,roughness:1,transparent:true,alphaTest:.5,side:THREE.DoubleSide,depthTest:false,depthWrite:false});
-[[0,[40,16],_fpMB],[.4,[40,32],_fpMO]].forEach(([e,[u,v],m])=>{const geo=new THREE.BoxGeometry((4+e*2)*S,(12+e*2)*S,(4+e*2)*S);uvs(geo,4,12,4,u,v);const mesh=new THREE.Mesh(geo,m);mesh.position.y=-4*S;mesh.renderOrder=998;fpArm.add(mesh)});
-fpArmGrp.add(fpArm);
-const fpHeldMat=new THREE.MeshStandardMaterial({depthTest:false,depthWrite:false});
-const fpHeld=new THREE.Mesh(new THREE.BoxGeometry(.18,.18,.5),fpHeldMat);fpHeld.position.set(0,-10*S,.2);fpHeld.visible=false;fpHeld.renderOrder=998;fpArm.add(fpHeld);
-let fpPrevSel=0,fpSwT=0;
-function mkRemote(p){if(!p||p.id==null)return;if(RM[p.id]){sc.remove(RM[p.id].c.g);delete RM[p.id]}const c=mkChar(defSkin(0));if(p.skin)loadSkin(p.skin).then(x=>c.setSkin(x));c.g.add(tag(p.name));sc.add(c.g);const s=p.s||{x:0,y:0,z:0,ry:0};c.g.position.set(s.x||0,s.y||0,s.z||0);RM[p.id]={c,tg:s,la:s.atk||0,nm:p.name};if(p.eyes){c.eye=p.eyes;eyeDraw(c,0)}}
-function join(){send({t:'join',name:$('#nm').value||'Joueur',skin:localStorage.skin,eyes:eyeCfg})}
+function mkRemote(p){if(!p||p.id==null)return;if(RM[p.id]){sc.remove(RM[p.id].c.g);delete RM[p.id]}const c=mkChar(defSkin(0));if(p.skin)loadSkin(p.skin).then(x=>c.setSkin(x));if(p.cape)c.setCape(p.cape);c.g.add(tag(p.name));sc.add(c.g);const s=p.s||{x:0,y:0,z:0,ry:0};c.g.position.set(s.x||0,s.y||0,s.z||0);RM[p.id]={c,tg:s,la:s.atk||0,nm:p.name};if(p.eyes){c.eye=p.eyes;eyeDraw(c,0)}}
+function join(){send({t:'join',name:$('#nm').value||'Joueur',skin:localStorage.skin,cape:localStorage.getItem('cape'),eyes:eyeCfg})}
 function startLocal(){ws=localWS();ws.onmessage=onMsg;$('#msg').textContent='Mode local : monde sauvegardé dans ce navigateur (onglets synchronisés).';join()}
 function connect(){$('#msg').textContent='';if(!location.host||location.protocol==='file:')return startLocal();
  const url=window.COMMUNITY_WORLD_WS||'wss://jeucool1.onrender.com';let sock;try{sock=new WebSocket(url)}catch(e){return startLocal()}ws=sock;
@@ -595,8 +605,8 @@ function localWS(){const K='cw_world';let W;try{W=JSON.parse(localStorage[K]||'n
  ch.onmessage=e=>{const m=e.data;if(m.t==='op'){out(m);return}if(['add','upd','del','tex','drop','dropmove','dropdel','juke'].includes(m.t)){fx(m);out(m)}
   else if(m.t==='join'){if(!m.re&&self){ch.postMessage({t:'join',p:self,re:1});Object.values(W.jukes).forEach(j=>ch.postMessage(j))}out({t:'join',p:m.p})}else out(m)};
  return{readyState:1,local:1,close(){clearInterval(gc);ch.postMessage({t:'leave',id});ch.close()},send(s){const m=JSON.parse(s);
-  if(m.t==='join'){self={id,name:String(m.name).slice(0,16),skin:m.skin,eyes:m.eyes,s:null};out({t:'init',id,pos:null,players:{},objs:W.objs,tex:W.tex,drops:W.drops,jukes:W.jukes,ops:[],h:Array.from(T.h),c:Array.from(T.c)});ch.postMessage({t:'join',p:self})}
-  else if(m.t==='eyes'){self.eyes=m.e;ch.postMessage({t:'eyes',id,e:m.e})}else if(m.t==='p'){self.s=m.s;ch.postMessage({t:'p',id,s:m.s})}else if(m.t==='skin'){self.skin=m.skin;ch.postMessage({t:'skin',id,skin:m.skin})}
+  if(m.t==='join'){self={id,name:String(m.name).slice(0,16),skin:m.skin,cape:m.cape,eyes:m.eyes,s:null};out({t:'init',id,pos:null,players:{},objs:W.objs,tex:W.tex,drops:W.drops,jukes:W.jukes,ops:[],h:Array.from(T.h),c:Array.from(T.c)});ch.postMessage({t:'join',p:self})}
+  else if(m.t==='eyes'){self.eyes=m.e;ch.postMessage({t:'eyes',id,e:m.e})}else if(m.t==='p'){self.s=m.s;ch.postMessage({t:'p',id,s:m.s})}else if(m.t==='skin'){self.skin=m.skin;ch.postMessage({t:'skin',id,skin:m.skin})}else if(m.t==='cape'){self.cape=m.cape;ch.postMessage({t:'cape',id,cape:m.cape})}
   else if(m.t==='chat')share({t:'chat',id,n:self.name,m:String(m.m).slice(0,200)});
   else if(m.t==='voice')ch.postMessage({t:'voice',id,d:m.d,l:m.l,a:m.a});
   else if(m.t==='add'){m.o.id=`local:${Date.now().toString(36)}:${Math.random().toString(36).slice(2,8)}`;const a={t:'add',o:m.o,by:id};fx(a);share(a)}
@@ -614,7 +624,7 @@ function onMsg(e){let m;try{m=JSON.parse(e.data)}catch(err){return}
   else if(m.t==='join'&&m.p?.id!==myId){mkRemote(m.p);log(m.p.name+' a rejoint le monde.')}
   else if(m.t==='leave'&&RM[m.id]){sc.remove(RM[m.id].c.g);delete RM[m.id]}
   else if(m.t==='p'&&RM[m.id]&&m.s)RM[m.id].tg=m.s;
-  else if(m.t==='eyes'&&RM[m.id]){RM[m.id].c.eye=m.e;eyeDraw(RM[m.id].c,0)}else if(m.t==='skin'&&RM[m.id])loadSkin(m.skin).then(x=>RM[m.id]?.c.setSkin(x));
+  else if(m.t==='eyes'&&RM[m.id]){RM[m.id].c.eye=m.e;eyeDraw(RM[m.id].c,0)}else if(m.t==='skin'&&RM[m.id])loadSkin(m.skin).then(x=>RM[m.id]?.c.setSkin(x));else if(m.t==='cape'&&RM[m.id])RM[m.id].c.setCape(m.cape);
   else if(m.t==='chat'){const cc=m.id===myId||(m.id==null&&m.n===($('#nm').value||'Joueur'))?me.c:(RM[m.id]||Object.values(RM).find(r=>r.nm===m.n))?.c;if(cc)bubble(cc,m.m);log('<b>'+m.n+'</b> : '+String(m.m||'').replace(/</g,'&lt;'))}
   else if(m.t==='voice')voiceIn(m);
   else if(m.t==='time')tOff=(((m.v/24000-Date.now()/1000/480)%1)+1)%1;
@@ -741,7 +751,7 @@ function renderInv(){try{localStorage.inv=JSON.stringify(inv)}catch(e){}const f=
 function sclick(a,i,rt){const s=a[i];if(!cur){if(s){if(rt&&s.n>1){const h=s.n>>1;cur=cloneItem(s,h);s.n-=h}else{cur=s;a[i]=null}}}
  else if(!s){if(rt&&cur.n>1){a[i]=cloneItem(cur,1);cur.n--}else{a[i]=cur;cur=null}}
  else if(s.k===cur.k&&!s.model&&!cur.model&&!s.cid&&!cur.cid){const t=Math.min(itemDef(s)[2]-s.n,rt?1:cur.n);s.n+=t;cur.n-=t;if(!cur.n)cur=null}else{a[i]=cur;cur=s}renderInv()}
-function held(){const s=inv[sel];me.c.held.visible=!!s;if(s)me.c.held.material.color.set(itemDef(s)[3]);if(fpHeld){fpHeld.visible=!!s;if(s&&fpHeldMat)fpHeldMat.color.set(itemDef(s)[3])}}
+function held(){const s=inv[sel];me.c.held.visible=!!s;if(s)me.c.held.material.color.set(itemDef(s)[3])}
 $('#inv').onmousedown=e=>{if(e.target.closest('.slot'))return;if(cur){throwItem(cur);cur=null;renderInv()}};
 document.addEventListener('mousedown',e=>{if(!invOpen||!cur||e.target.closest('#inv'))return;throwItem(cur);cur=null;renderInv()},true);
 onmousemove=e=>{$('#cur').style.left=e.clientX+8+'px';$('#cur').style.top=e.clientY+8+'px'};renderInv();
@@ -997,7 +1007,7 @@ $('#vtest').onclick=()=>vs.test=performance.now()+3500;
 applyMouthCfg();
 // ---------- UI, chat, commandes
 function log(h){const d=document.createElement('div');d.innerHTML=h;$('#log').append(d);setTimeout(()=>d.remove(),14000);while($('#log').children.length>8)$('#log').firstChild.remove()}
-function showP(id){['menu','cust','opts','eyes','voice'].forEach(x=>$('#'+x).classList.toggle('hid',x!==id));$('#chat').style.visibility=mode==='play'?'visible':'hidden';$('#hot').style.visibility=mode==='play'?'visible':'hidden'}
+function showP(id){['menu','cust','cape','opts','eyes','voice'].forEach(x=>$('#'+x).classList.toggle('hid',x!==id));$('#chat').style.visibility=mode==='play'?'visible':'hidden';$('#hot').style.visibility=mode==='play'?'visible':'hidden'}
 function unlockAudio(){try{const c=actx();if(c.state==='suspended')c.resume()}catch(e){}}
 document.addEventListener('pointerdown',unlockAudio,{once:true});
 $('#bPlay').onclick=()=>{unlockAudio();$('#nm').blur();return mode==='play'?(paused=false,showP(null)):connect()};$('#bCust').onclick=()=>showP('cust');$('#bOpts').onclick=()=>showP('opts');
@@ -1006,6 +1016,25 @@ $('#nm').value=localStorage.nm||'';$('#nm').onchange=()=>localStorage.nm=$('#nm'
 $('#bSkin').onclick=()=>$('#fSkin').click();
 function setSkin(c){myCv=c;allC.forEach(x=>x===me.c||prevs.some(p=>p.ch===x)?x.setSkin(c):0);localStorage.skin=c.toDataURL();send({t:'skin',skin:localStorage.skin})}
 $('#fSkin').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>loadSkin(r.result).then(setSkin);r.readAsDataURL(f)};
+const capeCanvas=$('#capeCrop'),capeCtx=capeCanvas.getContext('2d');let cropImg=null,cropZoom=1,cropPanX=0,cropPanY=0,cropToken=0,cropDrag=null,capeExportData=myCape;
+function updateCapeSummary(){$('#capeStatusMini').textContent=myCape?'🧥 Cape appliquée — PNG 160 × 256.':'Aucune cape pour le moment.';$('#bCapeRemove').disabled=!myCape}
+function setCape(data){if(data&&(typeof data!=='string'||!data.startsWith('data:image/png;base64,')||data.length>600_000)){log('Image de cape invalide ou trop volumineuse.');return false}try{if(data)localStorage.setItem('cape',data);else localStorage.removeItem('cape')}catch(e){log('Impossible de sauvegarder la cape dans ce navigateur.');return false}myCape=data||null;[me.c,...prevs.map(p=>p.ch)].forEach(c=>c.setCape(myCape));send({t:'cape',cape:myCape});updateCapeSummary();return true}
+function drawCapeCrop(){capeCtx.clearRect(0,0,capeCanvas.width,capeCanvas.height);if(!cropImg){capeCtx.fillStyle='#fff';capeCtx.font='bold 15px system-ui';capeCtx.textAlign='center';capeCtx.textBaseline='middle';capeCtx.fillText('Choisis une image',capeCanvas.width/2,capeCanvas.height/2);return}const w=capeImg.naturalWidth||capeImg.width,h=capeImg.naturalHeight||capeImg.height,scale=Math.max(capeCanvas.width/w,capeCanvas.height/h)*cropZoom,dw=w*scale,dh=h*scale;cropPanX=cl(cropPanX,capeCanvas.width-dw,0);cropPanY=cl(cropPanY,capeCanvas.height-dh,0);capeCtx.drawImage(cropImg,(capeCanvas.width-dw)/2+cropPanX,(capeCanvas.height-dh)/2+cropPanY,dw,dh)}
+function clearCapeCrop(message){cropToken++;cropImg=null;cropDrag=null;cropZoom=1;cropPanX=cropPanY=0;$('#capeZoom').value=1;$('#capeZoom').disabled=true;$('#bCapeApply').disabled=true;$('#bCapeReset').disabled=true;drawCapeCrop();if(message)$('#capeStatus').textContent=message}
+function loadCapeCrop(src,message){const token=++cropToken,img=new Image();img.onload=()=>{if(token!==cropToken)return;cropImg=img;cropZoom=1;cropPanX=cropPanY=0;$('#capeZoom').value=1;$('#capeZoom').disabled=false;$('#bCapeApply').disabled=false;$('#bCapeReset').disabled=false;drawCapeCrop();$('#capeStatus').textContent=message};img.onerror=()=>{if(token===cropToken){clearCapeCrop('Impossible de lire cette image. Essaie un autre fichier.')}};img.src=src}
+function openCapeEditor(){showP('cape');capeExportData=myCape;$('#bCapeDownload').disabled=!capeExportData;$('#bCapeRemove').disabled=!myCape;if(myCape)loadCapeCrop(myCape,'Cape actuelle chargée — tu peux la recadrer ou choisir une autre image.');else clearCapeCrop('Choisis une image pour commencer.')}
+$('#bCape').onclick=openCapeEditor;$('#bCapeFile').onclick=()=>$('#fCape').click();
+$('#fCape').onchange=e=>{const f=e.target.files?.[0];e.target.value='';if(!f)return;if(f.size>20*1024*1024){$('#capeStatus').textContent='Fichier trop volumineux (maximum 20 Mo).';return}if(f.type&&!f.type.startsWith('image/')){$('#capeStatus').textContent='Choisis un fichier image.';return}clearCapeCrop('Chargement de l’image…');capeExportData=null;$('#bCapeDownload').disabled=true;const reader=new FileReader();reader.onerror=()=>$('#capeStatus').textContent='Impossible de lire ce fichier.';reader.onload=()=>loadCapeCrop(reader.result,'Image prête : glisse-la pour choisir le cadrage.');reader.readAsDataURL(f)};
+function capeCropRect(){const w=cropImg.naturalWidth||cropImg.width,h=cropImg.naturalHeight||cropImg.height,scale=Math.max(capeCanvas.width/w,capeCanvas.height/h)*cropZoom,sw=capeCanvas.width/scale,sh=capeCanvas.height/scale,cx=w/2-cropPanX/scale,cy=h/2-cropPanY/scale;return{sx:cl(cx-sw/2,0,w-sw),sy:cl(cy-sh/2,0,h-sh),sw,sh}}
+function makeCapePng(){if(!cropImg)return null;const r=capeCropRect(),out=document.createElement('canvas');out.width=160;out.height=256;const x=out.getContext('2d');x.imageSmoothingEnabled=true;x.imageSmoothingQuality='high';x.drawImage(cropImg,r.sx,r.sy,r.sw,r.sh,0,0,out.width,out.height);return out.toDataURL('image/png')}
+$('#capeZoom').oninput=e=>{cropZoom=+e.target.value;drawCapeCrop()};$('#bCapeReset').onclick=()=>{cropZoom=1;cropPanX=cropPanY=0;$('#capeZoom').value=1;drawCapeCrop()};
+capeCanvas.addEventListener('pointerdown',e=>{if(!cropImg)return;const r=capeCanvas.getBoundingClientRect();cropDrag={x:e.clientX,y:e.clientY,panX:cropPanX,panY:cropPanY,sx:capeCanvas.width/r.width,sy:capeCanvas.height/r.height};capeCanvas.setPointerCapture(e.pointerId)});
+capeCanvas.addEventListener('pointermove',e=>{if(!cropDrag)return;cropPanX=cropDrag.panX+(e.clientX-cropDrag.x)*cropDrag.sx;cropPanY=cropDrag.panY+(e.clientY-cropDrag.y)*cropDrag.sy;drawCapeCrop()});
+for(const ev of ['pointerup','pointercancel','lostpointercapture'])capeCanvas.addEventListener(ev,()=>{cropDrag=null});
+$('#bCapeApply').onclick=()=>{const data=makeCapePng();if(!data){$('#capeStatus').textContent='Choisis d’abord une image.';return}if(setCape(data)){capeExportData=data;$('#bCapeDownload').disabled=false;$('#capeStatus').textContent='Cape appliquée et enregistrée en PNG (160 × 256).'}};
+$('#bCapeDownload').onclick=()=>{if(!capeExportData)return;const a=document.createElement('a');a.href=capeExportData;a.download='ma-cape.png';document.body.append(a);a.click();a.remove()};
+$('#bCapeRemove').onclick=()=>{if(setCape(null)){capeExportData=null;clearCapeCrop('Cape retirée. Choisis une nouvelle image pour en créer une autre.');$('#bCapeDownload').disabled=true}};
+$('#bCapeBack').onclick=()=>showP('cust');updateCapeSummary();drawCapeCrop();
 [0,1,2].forEach(i=>{const b=document.createElement('button');b.textContent='Skin '+(i+1);b.onclick=()=>setSkin(defSkin(i));$('#presets').append(b)});
 [['sens','Sensibilité caméra',.3,3,.1],['dist','Distance caméra',2,12,.5],['zoom','Zoom maximal (maintiens C)',1.5,12,.5],['vol','Volume',0,1,.05],['mus','Musique',0,1,.05],['sfx','Effets sonores',0,1,.05]].forEach(([k,n,a,b,s])=>{const l=document.createElement('label');l.innerHTML=n+`<input type=range min=${a} max=${b} step=${s} value=${cfg[k]}>`;l.firstChild.nextSibling.oninput=e=>{cfg[k]=+e.target.value;localStorage.cfg=JSON.stringify(cfg)};$('#optl').append(l)});
 $('#oq').value=cfg.q;$('#oq').onchange=e=>{cfg.q=+e.target.value;localStorage.cfg=JSON.stringify(cfg);quality()};
@@ -1200,38 +1229,6 @@ function frame(now){requestAnimationFrame(frame);const dt=Math.min(.05,(now-last
  const zOn=zCur>1.02&&mode==='play'&&!dead;
  zhud.classList.toggle('on',zOn);if(zOn)zhud.textContent='🔍 zoom ×'+zCur.toFixed(1)+(fp?'':' — sur le curseur');
  if(zOn&&!fp){const L=!!document.pointerLockElement;ztg.style.display='block';ztg.style.left=(L?innerWidth/2:mx)+'px';ztg.style.top=(L?innerHeight/2:my)+'px'}else ztg.style.display='none';
- // ---- Animation main première personne (style Minecraft) ----
- // !! obligatoire : sans ça, en 3e personne l'expression vaut 0 (nombre) et Three.js
- // teste `visible === false` strictement → le bras 1re personne restait affiché en 3e.
- fpArmGrp.visible=!!(mode==='play'&&fp&&!dead);
- if(fpArmGrp.visible){
-  const sp=st.sp||0,sw=Math.sin(me.c.ph),amp=cl(sp/4.3,0,1),run=sp>5.2?1:0,idle=1-cl(amp,0,1);
-  const br=Math.sin(tm*1.9),idl=Math.sin(tm*1.4);
-  let rx=-.55,ry=.25,rz=-.12,px=.32,py=-.28,pz=-.42;
-  // respiration au repos
-  rx+=idl*.03*idle;py+=br*.004*idle;
-  // marche / course : balancement du bras
-  rx-=sw*amp*(.65+.25*run);rz+=sw*amp*.06;
-  py+=Math.abs(Math.sin(me.c.ph))*amp*.012;px+=Math.cos(me.c.ph*2)*amp*.004;
-  // attaque (clic gauche)
-  if(st.atk>0){const u=1-cl(st.atk/.35,0,1),sn=Math.sin(u*PI),w=cl(sn*3,0,1);rx=lp(rx,-.5-sn*1.9,w);rz=lp(rz,.25*sn,w)}
-  // utilisation (clic droit)
-  if(st.use>0){const w=cl(st.use*8,0,1);rx=lp(rx,-1.2+Math.sin(tm*18)*.22,w);rz=lp(rz,-.1,w)}
-  // accroupi
-  rx+=st.sn*.15;py-=st.sn*.04;px+=st.sn*.02;
-  // en l'air (saut)
-  if(st.air&&!st.fly&&!st.gl){rx-=.25;py+=.02}
-  // vol créatif
-  if(st.fly){rx+=.1+.4*cl(sp/9,0,1)}
-  // élytres (plané)
-  if(st.gl){rx=lp(rx,.3,.5);ry=lp(ry,0,.5)}
-  // changement d'objet (animation switch)
-  if(sel!==fpPrevSel){fpPrevSel=sel;fpSwT=.2}
-  if(fpSwT>0){fpSwT=Math.max(0,fpSwT-dt);const u=fpSwT/.2,sn=Math.sin(u*PI);py-=sn*.15;rx+=sn*.3}
-  fpArm.position.set(px,py,pz);fpArm.rotation.set(rx,ry,rz);
-  // synchroniser l'objet en main
-  fpHeld.visible=!!inv[sel];if(inv[sel])fpHeldMat.color.set(itemDef(inv[sel])[3]);
- }
  me.c.g.visible=!(mode==='play'&&fp&&!dead);sun.target.position.copy(me.pos);env();
  R.render(sc,cam);
  prevs.forEach(p=>{if(p.el.parentElement.classList.contains('hid'))return;p.ch.g.rotation.y=p.yaw;p.ch.st.sp=0;if(p.el.id==='pv4'){p.ch.mo=vs.mo||0;p.ch.amp=vcfg.amp;p.ch.setML(vcfg.ml)}anim(p.ch,dt,tm);if(p.el.id==='pv2'){if(!p.d)p.yaw=lp(p.yaw,0,.1);const q=p.el.getBoundingClientRect();p.ch.head.rotation.y=cl((mx-q.left-q.width/2)/350,-1,1);p.ch.head.rotation.x=cl((my-q.top-q.height*.22)/350,-.6,.6)}p.r.render(p.s,p.c)})}
