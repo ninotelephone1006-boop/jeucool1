@@ -280,20 +280,33 @@ wss.on('connection', (ws) => {
       const oid = String(m.id || '');
       const box = world.objs[oid];
       if (!box || box.type !== 'jukebox' || distance(me.s || {}, box.p) > 16) return;
+      // Éjecte le disque présent dans le jukebox : il retombe au sol.
+      const ejectDisc = (prev) => {
+        if (!prev || !prev.cid) return;
+        spawnDrop(id, { k: 'cd', n: 1, cid: String(prev.cid).slice(0, 120), name: String(prev.name || 'CD').slice(0, 48) },
+          [box.p[0], box.p[1] + .7, box.p[2]], [(Math.random() - .5) * 1.4, 2.4, (Math.random() - .5) * 1.4]);
+      };
       if (m.stop) {
+        const prev = world.jukes[oid];
         delete world.jukes[oid];
         markDirty();
         broadcastAll({ t: 'juke', id: oid, stop: 1, from: id });
+        ejectDisc(prev);
         return;
       }
       if (typeof m.data !== 'string' || m.data.length > MAX_AUDIO_CHARS) return;
+      const newCid = String(m.cid || '').slice(0, 120);
+      if (!newCid) return;
+      const prev = world.jukes[oid];
       const state = {
-        id: oid, name: String(m.name || 'CD').slice(0, 30), cid: String(m.cid || '').slice(0, 120),
+        id: oid, name: String(m.name || 'CD').slice(0, 30), cid: newCid,
         data: m.data, from: id, startedAt: now()
       };
       world.jukes[oid] = state;
       markDirty();
       broadcastAll({ t: 'juke', ...state });
+      // Remplacement : l'ancien disque est éjecté au sol.
+      if (prev && prev.cid && prev.cid !== newCid) ejectDisc(prev);
       return;
     }
 
@@ -393,10 +406,15 @@ wss.on('connection', (ws) => {
       const o = world.objs[m.id];
       const reach = 16 + (o.type === 'model' ? Math.max(...o.s.map(Math.abs)) * 1.5 : 0);
       if (distance(me.s || {}, o.p) > reach) return;
+      const prevJuke = o.type === 'jukebox' ? world.jukes[m.id] : null;
       delete world.objs[m.id];
       if (o.type === 'jukebox' && world.jukes[m.id]) {
         delete world.jukes[m.id];
         broadcastAll({ t: 'juke', id: m.id, stop: 1, from: id });
+      }
+      if (prevJuke && prevJuke.cid) {
+        spawnDrop(id, { k: 'cd', n: 1, cid: String(prevJuke.cid).slice(0, 120), name: String(prevJuke.name || 'CD').slice(0, 48) },
+          [o.p[0], o.p[1] + .7, o.p[2]], [(Math.random() - .5) * 1.4, 2.4, (Math.random() - .5) * 1.4]);
       }
       markDirty();
       broadcastAll({ t: 'del', id: m.id });
@@ -422,10 +440,16 @@ wss.on('connection', (ws) => {
       return;
     }
     if (m.t === 'del' && m.id && world.objs[m.id]) {
+      const gone = world.objs[m.id];
+      const prevJuke = gone.type === 'jukebox' ? world.jukes[m.id] : null;
       delete world.objs[m.id];
       if (world.jukes[m.id]) {
         delete world.jukes[m.id];
         broadcastAll({ t: 'juke', id: m.id, stop: 1, from: id });
+      }
+      if (prevJuke && prevJuke.cid) {
+        spawnDrop(id, { k: 'cd', n: 1, cid: String(prevJuke.cid).slice(0, 120), name: String(prevJuke.name || 'CD').slice(0, 48) },
+          [gone.p[0], gone.p[1] + .7, gone.p[2]], [(Math.random() - .5) * 1.4, 2.4, (Math.random() - .5) * 1.4]);
       }
       markDirty();
       broadcastAll({ t: 'del', id: m.id });
