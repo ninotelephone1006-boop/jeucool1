@@ -968,7 +968,7 @@ function log(h){const d=document.createElement('div');d.innerHTML=h;$('#log').ap
 function showP(id){['menu','cust','opts','eyes','voice'].forEach(x=>$('#'+x).classList.toggle('hid',x!==id));$('#chat').style.visibility=mode==='play'?'visible':'hidden';$('#hot').style.visibility=mode==='play'?'visible':'hidden'}
 function unlockAudio(){try{const c=actx();if(c.state==='suspended')c.resume()}catch(e){}}
 document.addEventListener('pointerdown',unlockAudio,{once:true});
-$('#bPlay').onclick=()=>{unlockAudio();return mode==='play'?(paused=false,showP(null)):connect()};$('#bCust').onclick=()=>showP('cust');$('#bOpts').onclick=()=>showP('opts');
+$('#bPlay').onclick=()=>{unlockAudio();$('#nm').blur();return mode==='play'?(paused=false,showP(null)):connect()};$('#bCust').onclick=()=>showP('cust');$('#bOpts').onclick=()=>showP('opts');
 $('#bQuit').onclick=()=>mode==='play'?quit():(close(),$('#msg').textContent='Vous pouvez fermer l’onglet.');document.querySelectorAll('.back').forEach(b=>b.onclick=()=>showP('menu'));
 $('#nm').value=localStorage.nm||'';$('#nm').onchange=()=>localStorage.nm=$('#nm').value;
 $('#bSkin').onclick=()=>$('#fSkin').click();
@@ -1049,7 +1049,7 @@ const RC={planche:[4,{bois:1}],baton:[4,{planche:2}],marteau:[1,{baton:2,fer:2}]
 Object.assign(RC,{hache:[1,{baton:2,planche:3}],pioche:[1,{baton:2,pierre:3}],epee:[1,{baton:1,pierre:2}],elytre:[1,{tissu:6,fer:2}],feu_artifice:[2,{baton:1,pierre:1,tissu:1}],'o:bloc_planche':[4,{planche:1}],'o:bloc_bois':[4,{bois:1}],'o:panneau':[2,{planche:2,baton:1}],'o:commande_bloc':[1,{fer:8,pierre:4}]});function rec(k){if(RC[k])return RC[k];if(!k.startsWith('o:'))return null;const t=k.slice(2),c=Object.keys(LIB).find(c=>LIB[c][t]);return c==='Nature'?null:c==='Construction'?[1,{pierre:4}]:c==='Bâtiments'?[1,{planche:30,pierre:20,verre:6}]:[1,{planche:4,fer:2}]}
 function allGrid(el,q,cb,f){el.innerHTML='';q=q.toLowerCase();Object.keys(IT).filter(k=>IT[k][0].toLowerCase().includes(q)&&(!f||f(k))).forEach(k=>{const d=document.createElement('div');d.className='slot';d.innerHTML=IT[k][1];d.title=IT[k][0];d.onclick=()=>cb(k);el.append(d)})}
 const cg=()=>{const cats=gm==='creative'?CREATIVE_CATS:CATS;ctabs();const filter=cats[ccat];allGrid($('#cg'),$('#cq').value,k=>give(k,IT[k][2]),k=>(gm!=='creative'||CREATIVE_ALLOWED.has(k))&&(!filter||filter(k)))},crList=()=>allGrid($('#crl'),$('#crq').value,k=>{cs=k;crRec()});
-function openCraft(o){crOpen=o;if(o)unlock();$('#cr').classList.toggle('hid',!o);if(o){if(invOpen)toggleInv();crList();crRec()}}
+function openCraft(o){crOpen=o;if(o)unlock();$('#cr').classList.toggle('hid',!o);if(o){if(invOpen)toggleInv();crList();crRec()}else $('#crq').blur()}
 function crRec(){const el=$('#crr');if(!cs){el.innerHTML='<p>Clique sur un objet de la liste (comme JEI) pour voir sa recette et ce qu’il sert à fabriquer.</p>';return}
  const r=rec(cs),d=IT[cs],ok=r&&(gm==='creative'||Object.entries(r[1]).every(([k,n])=>have(k)>=n));
  el.innerHTML=`<h3 style="margin:0">${d[1]} ${d[0]}</h3><div style="font-size:12px">${d[4]}</div><hr>`+(r?`<b>Recette → ×${r[0]}</b>`+Object.entries(r[1]).map(([k,n])=>`<div style="color:${have(k)>=n?'#9f9':'#f99'}">${IT[k][1]} ${IT[k][0]} ×${n} <small>(${have(k)})</small></div>`).join('')+`<button id=cf ${ok?'':'disabled'}>🔨 CRAFTER</button>`:'<i>Pas de recette (loot / créatif).</i>')+'<hr><b>Sert à :</b><div id=us style="display:flex;flex-wrap:wrap;gap:3px"></div>';
@@ -1059,7 +1059,15 @@ $('#crq').oninput=crList;$('#cq').oninput=cg;$('#ct').onclick=e=>{const b=e.targ
 // ---------- entrées
 const K={};let drag=0,rdown=null,brushing=0,lastE=null,flatY=0,lastBr=0;const ndc=new THREE.Vector2(),rc=new THREE.Raycaster();
 const active=()=>mode==='play'&&!paused&&!invOpen&&!chatOpen&&!crOpen&&!cmdOpen&&!dead;
-onkeydown=e=>{if(document.activeElement.tagName==='TEXTAREA'||(document.activeElement.tagName==='INPUT'&&document.activeElement.type==='text'))return;const k=e.key.length===1?e.key.toLowerCase():e.key;K[k]=1;if(mode!=='play'||dead)return;
+onkeydown=e=>{const ae=document.activeElement;
+ if(ae&&(ae.tagName==='TEXTAREA'||(ae.tagName==='INPUT'&&ae.type==='text'))){
+  // Un champ texte caché (pseudo, recherche d'inventaire/craft…) peut garder le focus
+  // et avaler toutes les touches → le zoom C ne répondait plus. On ne laisse les touches
+  // au champ que s'il est réellement ouvert ; sinon on lui reprend le focus.
+  if(e.key==='Escape'){ae.blur();return}
+  const stillOpen=ae.id==='ci'?chatOpen:ae.id==='cmt'?!!cmdOpen:ae.id==='nm'?(mode!=='play'||paused):ae.id==='cq'?invOpen:ae.id==='crq'?!!crOpen:false;
+  if(stillOpen)return;ae.blur()}
+ const k=e.key.length===1?e.key.toLowerCase():e.key;K[k]=1;if(e.code==='KeyC')K.c=1;if(mode!=='play'||dead)return;
  if(['Control',' ','ArrowUp','ArrowDown','Tab'].includes(k)||e.ctrlKey)e.preventDefault();
  if(k==='Escape'){if(cmdOpen)closeCmd();else if(crOpen)openCraft(0);else if(invOpen)toggleInv();else if(chatOpen)openChat(false);else if(performance.now()-lockLost>150){paused=!paused;showP(paused?'menu':null);$('#bPlay').textContent='REPRENDRE';$('#bQuit').textContent='QUITTER LE MONDE'}return}
  if(k==='e'&&!chatOpen)toggleInv();if(!active())return;
@@ -1073,10 +1081,10 @@ onkeydown=e=>{if(document.activeElement.tagName==='TEXTAREA'||(document.activeEl
  if(build){const O=selId&&OB[selId]?.o,st=e.shiftKey?1:.25;if(k==='Delete'||k==='Backspace'){e.preventDefault();if(gm==='creative')breakObject(selId);else delSel();return}
   if(O){const p=[...O.p];let ch=1;if(k==='ArrowLeft')p[0]-=st;else if(k==='ArrowRight')p[0]+=st;else if(k==='ArrowUp')p[2]-=st;else if(k==='ArrowDown')p[2]+=st;else if(k==='PageUp')p[1]+=st;else if(k==='PageDown')p[1]-=st;else ch=0;if(ch){send({t:'upd',id:selId,p:{p}});e.preventDefault()}}}
 };
-onkeyup=e=>{K[e.key.length===1?e.key.toLowerCase():e.key]=0};onblur=()=>{for(const k in K)K[k]=0};
+onkeyup=e=>{K[e.key.length===1?e.key.toLowerCase():e.key]=0;if(e.code==='KeyC')K.c=0};onblur=()=>{for(const k in K)K[k]=0};
 function putCursorBack(){if(!cur)return;const item=cloneItem(cur);cur=null;const left=giveItem(item);if(left>0)throwItem({...item,n:left});renderInv()}
 function syncInvMode(){const creative=gm==='creative';$('#cgw').style.display=creative?'block':'none';$('#trashWrap').style.display=creative?'flex':'none';if(invOpen)cg()}
-function toggleInv(){if(invOpen&&cur)putCursorBack();invOpen=!invOpen;if(invOpen)unlock();$('#inv').classList.toggle('hid',!invOpen);if(invOpen)syncInvMode();else renderInv()}
+function toggleInv(){if(invOpen&&cur)putCursorBack();invOpen=!invOpen;if(invOpen)unlock();$('#inv').classList.toggle('hid',!invOpen);if(invOpen)syncInvMode();else{$('#cq').blur();renderInv()}}
 function pick(e){document.pointerLockElement?ndc.set(0,0):ndc.set(e.clientX/innerWidth*2-1,-(e.clientY/innerHeight)*2+1);rc.setFromCamera(ndc,cam);rc.far=300;let g=null;const ray=rc.ray,p=new THREE.Vector3();
  for(let t=0;t<300;t+=.5){p.copy(ray.origin).addScaledVector(ray.direction,t);if(p.y<T.get(p.x,p.z)){let a=t-.5,b=t;for(let i=0;i<8;i++){const m=(a+b)/2;p.copy(ray.origin).addScaledVector(ray.direction,m);p.y<T.get(p.x,p.z)?b=m:a=m}g={p:p.clone(),d:b};break}}
  const roots=Object.values(OB).filter(b=>b.o.vis!==0||build).map(b=>b.g),hit=rc.intersectObjects(roots,true)[0];let id=null,h=null;if(hit){let o=hit.object;while(o&&!o.userData.id)o=o.parent;if(o&&(!g||hit.distance<g.d)){id=o.userData.id;h=hit}}return{g,id,h,p:h?h.point:g?.p}}
@@ -1091,8 +1099,10 @@ $('#c').oncontextmenu=e=>e.preventDefault();
 let yaw=0,pit=.35;const ring=new THREE.Mesh(new THREE.RingGeometry(.93,1,48).rotateX(-PI/2),new THREE.MeshBasicMaterial({color:0xffcc00,depthTest:false}));ring.visible=false;ring.renderOrder=9;sc.add(ring);
 onmousemove=(f=>ev=>{f(ev);mx=ev.clientX;my=ev.clientY;lme=ev;if((drag||document.pointerLockElement)&&active()){yaw-=ev.movementX*.005*cfg.sens;pit=cl(pit+ev.movementY*.005*cfg.sens,fp?-1.5:-.3,fp?1.5:1.4)}
  if(gd)dragMove(ev);if(build&&TERR.includes(tool)&&ev.target.id==='c'){lastE=ev;const g=pick(ev).g;ring.visible=!!g;if(g){ring.position.copy(g.p);ring.position.y+=.15;ring.scale.setScalar(brush.r)}}else ring.visible=false})(onmousemove);
-onwheel=e=>{if(!active()||e.target.id!=='c')return;const d=Math.sign(e.deltaY);
+onwheel=e=>{if(!active())return;const d=Math.sign(e.deltaY);
+ // C maintenu : la molette règle la force du zoom, même si le curseur est sur la barre d'objets / l'interface.
  if(K.c){cfg.zlvl=cl(zLvl()-d*.5,1.2,zMax());localStorage.cfg=JSON.stringify(cfg);return}
+ if(e.target.id!=='c')return;
  if(e.altKey){cfg.dist=cl(cfg.dist+d,2,12);return}sel=(sel+d+9)%9;renderInv()};
 function resize(){R.setSize(innerWidth,innerHeight,false);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix()}onresize=resize;resize();
 // ---------- v8 : pose sur grille (comme Minecraft) + objets fonctionnels
