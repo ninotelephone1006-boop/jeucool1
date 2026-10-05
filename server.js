@@ -88,6 +88,18 @@ function distance(a, b) {
   if (!validPos(a) || !Array.isArray(b) || b.length < 3) return Infinity;
   return Math.hypot(a.x - b[0], a.z - b[2], (a.y || 0) - (b[1] || 0));
 }
+function spawnDrop(owner, item, p, v) {
+  const safeItem = sanitizeItem(item);
+  if (!safeItem || Object.keys(world.drops).length >= 2000) return null;
+  const born = now();
+  const id = `d:${born.toString(36)}:${Math.random().toString(36).slice(2, 9)}`;
+  const pos = cleanVec(p);
+  const vel = cleanVec(v, [0, 3, 0]).map((n, i) => clamp(n, i === 1 ? -2 : -6, i === 1 ? 8 : 6));
+  const d = { id, owner, item: safeItem, p: pos, v: vel, born, pickupAfter: born + 600 };
+  world.drops[id] = d;
+  broadcastAll({ t: 'drop', d });
+  return d;
+}
 
 // Keep the same bilinear terrain heightmap as the browser simulation.
 function terrainAt(x, z) {
@@ -260,7 +272,14 @@ wss.on('connection', (ws) => {
       } else {
         items = Array.isArray(m.items) ? m.items.map(sanitizeItem).filter(Boolean).slice(0, 8) : [];
       }
-      if (items.length) send(ws, { t: 'reward', items });
+      if (m.drop === true || m.drop === 1) {
+        for (const item of items) {
+          if (Object.keys(world.drops).length >= 2000) break;
+          spawnDrop(id, item, [o.p[0], o.p[1] + .7, o.p[2]], [(Math.random() - .5) * 1.4, 2.4, (Math.random() - .5) * 1.4]);
+        }
+      } else if (items.length) {
+        send(ws, { t: 'reward', items });
+      }
       return;
     }
     if (m.t === 'del' && m.id && world.objs[m.id]) {
@@ -275,16 +294,12 @@ wss.on('connection', (ws) => {
     if (m.t === 'drop') {
       const item = sanitizeItem(m.item);
       if (!item || (!validPos(me.s || {}) && !Array.isArray(m.p)) || Object.keys(world.drops).length >= 2000) return;
-      const oid = `d:${now().toString(36)}:${Math.random().toString(36).slice(2, 9)}`;
       const p = Array.isArray(m.p) && m.p.length >= 3 ? cleanVec(m.p) : [me.s.x, me.s.y + 1, me.s.z];
       if (!validPos({ x: p[0], y: p[1], z: p[2] }) || (validPos(me.s || {}) && distance(me.s, p) > 4)) return;
       const v = Array.isArray(m.v)
         ? [clamp(cleanNum(m.v[0]), -6, 6), clamp(cleanNum(m.v[1], 3), -2, 8), clamp(cleanNum(m.v[2]), -6, 6)]
         : [0, 3, 0];
-      const born = now();
-      const d = { id: oid, owner: id, item, p, v, born, pickupAfter: born + 600 };
-      world.drops[oid] = d;
-      broadcastAll({ t: 'drop', d });
+      spawnDrop(id, item, p, v);
       return;
     }
     if (m.t === 'pickup' && m.id && world.drops[m.id]) {
