@@ -39,6 +39,8 @@ Le monde (terrain, objets, textures, objets au sol, heure) est sauvegardé **mê
 
 Les fichiers `.glb`, `.gltf` et `.obj` peuvent peser jusqu’à **100 Mo par modèle**. Le serveur autorise la taille WebSocket nécessaire au transfert de ces fichiers (encodés en base64). Pour conserver les gros modèles après un redémarrage, l’hébergeur doit préserver le fichier `world-save.json` ; la copie de secours dans le navigateur reste volontairement limitée à environ 3,5 Mo.
 
+À l’import, chaque modèle est **optimisé automatiquement sans changer son apparence** (géométrie dédupliquée sans perte, textures limitées à 1024 px et réencodées en JPEG/WebP) pour éviter les erreurs « sauvegarde impossible » dues aux fichiers trop lourds. Si le fichier est déjà optimal (ou utilise un format déjà compressé comme Draco), il est envoyé tel quel.
+
 ## 6. Servir le jeu depuis le serveur (optionnel)
 `server.js` sert aussi `index.html` sur `/`, avec le WebSocket pointé sur le même hôte : ouvre simplement `http://localhost:10000` (ou l'URL de ton hébergeur). GitHub Pages continue d'utiliser `wss://jeucool1.onrender.com` par défaut.
 
