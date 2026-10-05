@@ -33,18 +33,24 @@ Tes amis ouvriront ensuite l'URL GitHub Pages du jeu. Tous les navigateurs se co
 Le monde (terrain, objets, textures, objets au sol, heure) est sauvegardé **même quand plus personne n'est connecté** :
 
 - Le serveur écrit la carte dans `world-save.json` (chemin modifiable avec la variable d'environnement `WORLD_SAVE`) : à la déconnexion du dernier joueur, toutes les ~20 s si quelque chose a changé, et à l'arrêt (`SIGTERM`/`SIGINT`). Au démarrage, il recharge ce fichier.
-- Chaque navigateur garde en plus une copie de la carte dans `localStorage` (`cw_mirror`) : terrain, objets et, dans la limite de ~3,5 Mo, les textures/modèles importés. Si le serveur repart d'un monde vide (hébergeur gratuit dont le disque est remis à zéro, redémarrage, mise en veille), le premier joueur qui se reconnecte renvoie sa copie : la carte est restaurée à l'identique au lieu de repartir de zéro. Un serveur qui a déjà une carte n'accepte jamais cette restauration, donc rien ne peut l'écraser.
+- Chaque navigateur garde en plus une copie de la carte dans `localStorage` (`cw_mirror`) : terrain, objets et, dans la limite de ~3,5 Mo, les textures. Si le serveur repart d'un monde vide (hébergeur gratuit dont le disque est remis à zéro, redémarrage, mise en veille), le premier joueur qui se reconnecte renvoie sa copie : la carte est restaurée à l'identique au lieu de repartir de zéro. Un serveur qui a déjà une carte n'accepte jamais cette restauration, donc rien ne peut l'écraser.
 
-## 5. Importer des modèles 3D
+## 5. Objets au sol (clearlags)
 
-Les fichiers `.glb`, `.gltf` et `.obj` peuvent peser jusqu’à **100 Mo par modèle**. Le serveur autorise la taille WebSocket nécessaire au transfert de ces fichiers (encodés en base64). Pour conserver les gros modèles après un redémarrage, l’hébergeur doit préserver le fichier `world-save.json` ; la copie de secours dans le navigateur reste volontairement limitée à environ 3,5 Mo.
+Un objet lâché ou cassé **disparaît au bout de 2 minutes** :
 
-À l’import, chaque modèle est **optimisé automatiquement sans changer son apparence** (géométrie dédupliquée sans perte, textures limitées à 1024 px et réencodées en JPEG/WebP) pour éviter les erreurs « sauvegarde impossible » dues aux fichiers trop lourds. Si le fichier est déjà optimal (ou utilise un format déjà compressé comme Draco), il est envoyé tel quel.
+- le serveur porte l'échéance (`expireAt`) et envoie un `dropdel` à tout le monde (balayage toutes les 5 s) ; les objets déjà présents dans un ancien `world-save.json` sont nettoyés eux aussi ;
+- en mode local (sans serveur), le navigateur fait le même ménage et le partage aux autres onglets ;
+- le client retire aussi l'objet de la scène à l'échéance, au cas où un message se perd.
 
-## 6. Servir le jeu depuis le serveur (optionnel)
+## 6. Modèles 3D
+
+L'import de modèles `.glb` / `.gltf` / `.obj` a été **retiré** du jeu (plus de bouton « Importer un modèle 3D » dans la bibliothèque du mode build). Les modèles déjà présents dans une carte sauvegardée continuent de s'afficher, de pouvoir être déplacés, cassés et reposés : seul le chargement de nouveaux fichiers a disparu.
+
+## 7. Servir le jeu depuis le serveur (optionnel)
 `server.js` sert aussi `index.html` sur `/`, avec le WebSocket pointé sur le même hôte : ouvre simplement `http://localhost:10000` (ou l'URL de ton hébergeur). GitHub Pages continue d'utiliser `wss://jeucool1.onrender.com` par défaut.
 
-## 7. Commandes du jeu
+## 8. Commandes du jeu
 - **C** (maintenu) : zoom. En 1re personne, zoom classique au centre de l'écran ; en 3e personne (F5), le zoom se fait sur l'endroit où est le curseur.
 - **Molette en maintenant C** : règle la force du zoom (de ×1,2 à ×12, maximum réglable dans PARAMÈTRES).
 - **F5** : bascule 1re / 3e personne.

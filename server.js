@@ -9,6 +9,8 @@ const MAX_MODEL_BYTES = 100 * 1024 * 1024;
 // Models are sent as data URLs, so base64 adds roughly one third to the file size.
 const MAX_MODEL_DATA_CHARS = Math.ceil(MAX_MODEL_BYTES / 3) * 4 + 128;
 const MAX_TEX_CHARS = 30 * 1024 * 1024;
+// Clearlags : un objet au sol disparaît 2 minutes après être tombé.
+const DROP_TTL_MS = 2 * 60 * 1000;
 const MAX_RESTORE_TEX_CHARS = 24 * 1024 * 1024;
 const GRID = 257 * 257;
 
@@ -183,7 +185,7 @@ function spawnDrop(owner, item, p, v) {
   const id = `d:${born.toString(36)}:${Math.random().toString(36).slice(2, 9)}`;
   const pos = cleanVec(p);
   const vel = cleanVec(v, [0, 3, 0]).map((n, i) => clamp(n, i === 1 ? -2 : -6, i === 1 ? 8 : 6));
-  const d = { id, owner, item: safeItem, p: pos, v: vel, born, pickupAfter: born + 600 };
+  const d = { id, owner, item: safeItem, p: pos, v: vel, born, pickupAfter: born + 600, expireAt: born + DROP_TTL_MS };
   world.drops[id] = d;
   markDirty();
   broadcastAll({ t: 'drop', d });
@@ -494,13 +496,16 @@ setInterval(() => {
   }
 }, 50).unref();
 
-// Drop cleanup: prevents abandoned items from living forever.
+// Drop cleanup (clearlags): items vanish 2 minutes after they were dropped,
+// including items restored from an old world-save.json.
 setInterval(() => {
-  const cutoff = now() - 15 * 60 * 1000;
+  const t = now();
   for (const [id, d] of Object.entries(world.drops)) {
-    if (d.born < cutoff) { delete world.drops[id]; markDirty(); broadcastAll({ t: 'dropdel', id }); }
+    // Les drops sauvegardés avant cette version n'ont pas d'expireAt : on repart de born.
+    const deadline = Number(d.expireAt) || ((Number(d.born) || 0) + DROP_TTL_MS);
+    if (deadline <= t) { delete world.drops[id]; markDirty(); broadcastAll({ t: 'dropdel', id }); }
   }
-}, 60_000).unref();
+}, 5_000).unref();
 
 // Sauvegarde périodique de sécurité (objets au sol, modifications en attente).
 setInterval(() => { if (saveDirty) saveWorld(); }, 20_000).unref();
