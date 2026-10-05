@@ -633,7 +633,7 @@ function onMsg(e){let m;try{m=JSON.parse(e.data)}catch(err){return}
   else if(m.t==='chat'){const cc=m.id===myId||(m.id==null&&m.n===($('#nm').value||'Joueur'))?me.c:(RM[m.id]||Object.values(RM).find(r=>r.nm===m.n))?.c;if(cc)bubble(cc,m.m);log('<b>'+m.n+'</b> : '+String(m.m||'').replace(/</g,'&lt;'))}
   else if(m.t==='voice')voiceIn(m);
   else if(m.t==='time')tOff=(((m.v/24000-Date.now()/1000/480)%1)+1)%1;
-  else if(m.t==='hit'){flash(m.to);hitFx(m);if(m.to===myId)dmg(m.d,m)}else if(m.t==='ping'){if(m.id===myId)myPing=Date.now()-m.ts}else if(m.t==='juke')jukePlay(m);
+  else if(m.t==='hit'){flash(m.to);hitFx(m);if(m.to===myId&&dmg(m.d,m))playSfx(m.cr?'criticalHit':'hit')}else if(m.t==='ping'){if(m.id===myId)myPing=Date.now()-m.ts}else if(m.t==='juke')jukePlay(m);
   else if(m.t==='world'){applyWorld(m);log('🗺️ Monde restauré et synchronisé.')}
   else if(m.t==='op'){T.apply(m.o);tdirty=1}
   else if(m.t==='add'){addObj(m.o);if(m.by===myId&&pendSel){selId=m.o.id;pendSel=0}}
@@ -813,6 +813,10 @@ let eyePip=0,eyeMode=1;$('#epip').onclick=()=>{eyePip=1;$('#epm').textContent='C
   dn=1;z.setPointerCapture(e.pointerId);eyeMode=eyeHas(X,Y)<0?1:0;paint(e)};
  z.onpointermove=e=>{if(dn)paint(e)};z.onpointerup=z.onpointercancel=()=>dn=0}
 applyEyes();
+// ---------- effets sonores (sons fournis dans Sounds/)
+const SFX_FILES=Object.freeze({uiClick:'Sounds/buttonuiclick.mp3',hit:'Sounds/Hit.mp3',criticalHit:'Sounds/CriticalHit.mp3'}),sfxPlayers=Object.create(null);
+for(const[name,src]of Object.entries(SFX_FILES)){sfxPlayers[name]=[];try{for(let i=0;i<2;i++){const a=new Audio(src);a.preload='auto';a.load();sfxPlayers[name].push(a)}}catch(e){}}
+function playSfx(name){const pool=sfxPlayers[name],volume=cl((Number(cfg.vol)||0)*(Number(cfg.sfx)||0),0,1);if(!pool?.length||volume<=0)return;let a=pool.find(x=>x.paused||x.ended);if(!a){if(pool.length<4){a=pool[0].cloneNode();a.preload='auto';pool.push(a);a.load()}else a=pool[0]}a.volume=volume;try{a.currentTime=0;const p=a.play();if(p?.catch)p.catch(()=>{})}catch(e){}}
 // ---------- survie : vie, combat, bouclier, Tab, jukebox
 let hp=20,hrg=0,myPing=0,lastHit=0,lastSw=0,dead=0,deadT=0,spawnProt=0;const CDS={},jk={},kbv=new THREE.Vector3();
 const cdDB=(()=>{if(!('indexedDB'in window))return Promise.resolve(null);return new Promise(resolve=>{try{const q=indexedDB.open('community-world-audio',1);q.onupgradeneeded=()=>q.result.createObjectStore('tracks');q.onsuccess=()=>resolve(q.result);q.onerror=()=>resolve(null);q.onblocked=()=>resolve(null)}catch(e){resolve(null)}})})();
@@ -821,7 +825,7 @@ async function loadCD(cid){if(CDS[cid]?.data)return CDS[cid].data;const db=await
 const hud=document.createElement('div');hud.className='p';hud.style.cssText='right:14px;bottom:14px;display:none;gap:8px;align-items:flex-end;padding:8px';hud.innerHTML='<canvas id="hface" width="8" height="8" style="width:64px;height:64px;image-rendering:pixelated;border:2px solid #fff"></canvas><div style="width:16px;height:64px;background:#400;border:2px solid #fff;position:relative"><i id="hbar" style="position:absolute;left:0;right:0;bottom:0;background:#e33"></i></div>';document.body.append(hud);
 const tabl=document.createElement('div');tabl.className='p';tabl.style.cssText='left:50%;top:40px;transform:translateX(-50%);min-width:340px;display:none;font-size:13px';document.body.append(tabl);
 const blocking=()=>inv[sel]?.k==='bouclier'&&rdown;
-function dmg(d,m){if(gm!=='survival'||dead||performance.now()<spawnProt)return;const bl=blocking();hp=Math.max(0,hp-(bl?d*.2:d));hurtFx();knock(m,bl);if(hp<=0)die(m)}
+function dmg(d,m){if(gm!=='survival'||dead||performance.now()<spawnProt)return 0;const bl=blocking();hp=Math.max(0,hp-(bl?d*.2:d));hurtFx();knock(m,bl);if(hp<=0)die(m);return 1}
 function hurtFx(){const h=$('#hurt');h.style.transition='none';h.style.opacity=1;requestAnimationFrame(()=>requestAnimationFrame(()=>{h.style.transition='opacity .45s';h.style.opacity=0}))}
 // recul : toujours appliqué (direction envoyée par l'attaquant, sinon à l'opposé du joueur le plus proche)
 function knock(m,bl){let x=0,z=0;if(m&&Array.isArray(m.kb)){x=+m.kb[0]||0;z=+m.kb[1]||0}else{let q=null,bd=1e9;for(const id in RM){const p=RM[id].c.g.position,L=Math.hypot(p.x-me.pos.x,p.z-me.pos.z);if(L<bd){bd=L;q=p}}if(q){const dx=me.pos.x-q.x,dz=me.pos.z-q.z,L=Math.hypot(dx,dz)||1;x=dx/L*7;z=dz/L*7}}
@@ -845,7 +849,7 @@ function flash(id){const c=id===myId?me.c:RM[id]?.c;if(!c)return;const ms=[];c.g
 function tryHit(){const n=performance.now();if(gm!=='survival'||dead||n-lastHit<500)return;const d=new THREE.Vector3();cam.getWorldDirection(d);let b=null,bd=3.8;
  for(const id in RM){if(RM[id].tg?.dd)continue;const q=RM[id].c.g.position,v=new THREE.Vector3(q.x-me.pos.x,q.y+1-(me.pos.y+1.5),q.z-me.pos.z),L=v.length();if(L<bd&&(L<1.2||v.normalize().dot(d)>.8)){bd=L;b=id}}
  if(!b)return;lastHit=n;const st=me.c.st,crit=!!(st.air&&!st.gl&&!fly),base={epee:6,epee_pierre:5,hache:4,pioche:3}[inv[sel]?.k]||1,p=RM[b].c.g.position,kx=p.x-me.pos.x,kz=p.z-me.pos.z,kl=Math.hypot(kx,kz)||1,ks=7+(st.sp>5.2?2.5:0)+(crit?1.5:0);
- send({t:'hit',to:+b,from:myId,d:Math.round(base*(crit?1.5:1)*10)/10,cr:crit?1:0,kb:[kx/kl*ks,kz/kl*ks]});hitFx({to:+b,cr:crit?1:0})}
+ const hit={t:'hit',to:+b,from:myId,d:Math.round(base*(crit?1.5:1)*10)/10,cr:crit?1:0,kb:[kx/kl*ks,kz/kl*ks]};send(hit);hitFx(hit);playSfx(crit?'criticalHit':'hit')}
 function consumeCD(s){if(gm!=='survival'||!s)return;for(let i=0;i<36;i++)if(inv[i]===s){inv[i]=null;renderInv();return}}
 function cdSet(s,jid){unlock();const i=document.createElement('input');i.type='file';i.accept='audio/*,.mp3,.m4a,.ogg,.wav';i.onchange=()=>{const f=i.files?.[0];if(!f)return;if(f.size>14*1024*1024){log('Fichier audio trop volumineux (14 Mo max).');return}const r=new FileReader();r.onerror=()=>log('Lecture du CD impossible.');r.onload=()=>{if(typeof r.result!=='string'||r.result.length>20*1024*1024){log('Fichier audio trop volumineux (14 Mo max).');return}const n=prompt('Nom du CD :',f.name.replace(/\.[^.]+$/,''));if(n===null)return;s.cid=`cd:${Date.now().toString(36)}:${Math.random().toString(36).slice(2,7)}`;s.name=n.slice(0,30)||'CD';cacheCD(s.cid,r.result);renderInv();log('CD gravé : '+s.name.replace(/</g,'&lt;'));if(jid&&OB[jid]?.o.type==='jukebox'){send({t:'juke',id:jid,name:s.name,cid:s.cid,data:r.result,from:myId});consumeCD(s)}};r.readAsDataURL(f)};i.click()}
 function useCD(s,jid,sh){const shift=typeof sh==='boolean'?sh:!!K.Shift,box=jid?OB[jid]?.o:null,juk=box?.type==='jukebox';if(!s?.cid)return cdSet(s,jid);if(shift&&!juk)return cdSet(s,jid);loadCD(s.cid).then(data=>{if(!data)return cdSet(s,jid);if(juk){if(jk[jid]?.cid===s.cid&&!shift)send({t:'juke',id:jid,stop:1,from:myId});else{if(jk[jid]?.cid!==s.cid)consumeCD(s);send({t:'juke',id:jid,name:s.name||'CD',cid:s.cid,data,from:myId})}}else log('💿 '+String(s.name||'CD').replace(/</g,'&lt;')+' — clic droit sur un jukebox pour l’insérer (retiré de l’inventaire) · clic droit sans CD : éjecte le disque · Maj + clic droit sur le CD : changer de morceau.')})}
@@ -1015,6 +1019,7 @@ function log(h){const d=document.createElement('div');d.innerHTML=h;$('#log').ap
 function showP(id){['menu','cust','cape','opts','eyes','voice'].forEach(x=>$('#'+x).classList.toggle('hid',x!==id));$('#chat').style.visibility=mode==='play'?'visible':'hidden';$('#hot').style.visibility=mode==='play'?'visible':'hidden'}
 function unlockAudio(){try{const c=actx();if(c.state==='suspended')c.resume()}catch(e){}}
 document.addEventListener('pointerdown',unlockAudio,{once:true});
+document.addEventListener('click',e=>{const b=e.target.closest?.('button,[role="button"],.slot,.card');if(!b||b.matches(':disabled')||b.getAttribute('aria-disabled')==='true')return;playSfx('uiClick')},true);
 $('#bPlay').onclick=()=>{unlockAudio();$('#nm').blur();return mode==='play'?(paused=false,showP(null)):connect()};$('#bCust').onclick=()=>showP('cust');$('#bOpts').onclick=()=>showP('opts');
 $('#bQuit').onclick=()=>mode==='play'?quit():(close(),$('#msg').textContent='Vous pouvez fermer l’onglet.');document.querySelectorAll('.back').forEach(b=>b.onclick=()=>showP('menu'));
 $('#nm').value=localStorage.nm||'';$('#nm').onchange=()=>localStorage.nm=$('#nm').value;

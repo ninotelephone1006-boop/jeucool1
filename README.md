@@ -60,3 +60,13 @@ L'import de modèles `.glb` / `.gltf` / `.obj` a été **retiré** du jeu (plus 
 Dans **PERSONNALISER → CRÉER / MODIFIER MA CAPE**, choisis une image (PNG, JPEG, WebP, etc.), glisse-la dans le cadre et règle le zoom pour la recadrer. **Appliquer la cape** l’enregistre en PNG (160 × 256) et la partage aux autres joueurs ; **Télécharger le PNG** exporte le fichier. Le bouton **Retirer la cape** l’efface. La cape reste sur cet appareil pour les prochaines parties.
 
 Une cape se porte dans le dos : l’éditeur affiche sous le recadrage un **aperçu 3D du personnage vu de dos**, qui se met à jour dès qu’une cape est appliquée. Sur l’écran PERSONNALISER, le bouton **🔁 VOIR LA CAPE (FACE / DOS)** retourne l’aperçu principal, et en jeu la touche **F5** (3ᵉ personne) permet de voir sa propre cape.
+
+## 10. Effets sonores
+
+Les fichiers du dossier `Sounds/` sont utilisés par le jeu :
+
+- `buttonuiclick.mp3` pour les boutons, cases d’inventaire et cartes de l’interface ;
+- `Hit.mp3` pour un coup normal en combat ;
+- `CriticalHit.mp3` pour un coup critique.
+
+Le réglage **Effets sonores** (et le volume général) contrôle leur niveau. GitHub Pages sert directement les fichiers du dossier ; `server.js` les expose aussi sur `/Sounds/` pour le lancement local ou l’hébergement Node.js.

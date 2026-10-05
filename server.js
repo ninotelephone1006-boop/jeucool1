@@ -15,6 +15,11 @@ const MAX_RESTORE_TEX_CHARS = 24 * 1024 * 1024;
 const GRID = 257 * 257;
 
 const INDEX_FILE = path.join(__dirname, 'index.html');
+const SOUND_ASSETS = new Map([
+  ['/Sounds/CriticalHit.mp3', 'CriticalHit.mp3'],
+  ['/Sounds/Hit.mp3', 'Hit.mp3'],
+  ['/Sounds/buttonuiclick.mp3', 'buttonuiclick.mp3']
+]);
 let indexHtml = null;
 function serveGame(res) {
   try {
@@ -37,6 +42,22 @@ function serveGame(res) {
 const server = http.createServer((req, res) => {
   const url = String(req.url || '/').split('?')[0];
   if (url === '/' || url === '/index.html') return serveGame(res);
+  const soundFile = SOUND_ASSETS.get(url);
+  if (soundFile && (req.method === 'GET' || req.method === 'HEAD')) {
+    return fs.readFile(path.join(__dirname, 'Sounds', soundFile), (err, data) => {
+      if (err) {
+        res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+        return res.end('Fichier audio introuvable.');
+      }
+      res.writeHead(200, {
+        'Content-Type': 'audio/mpeg',
+        'Content-Length': data.length,
+        'Cache-Control': 'public, max-age=86400',
+        'X-Content-Type-Options': 'nosniff'
+      });
+      res.end(req.method === 'HEAD' ? undefined : data);
+    });
+  }
   res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' });
   res.end('COMMUNITY WORLD WebSocket server is running.');
 });
