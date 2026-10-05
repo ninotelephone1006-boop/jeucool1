@@ -494,13 +494,17 @@ setInterval(() => {
   }
 }, 50).unref();
 
-// Drop cleanup: prevents abandoned items from living forever.
+// Clearlag : les objets jetés au sol disparaissent au bout de 2 minutes.
+const DROP_TTL = 2 * 60 * 1000;
 setInterval(() => {
-  const cutoff = now() - 15 * 60 * 1000;
+  const cutoff = now() - DROP_TTL;
+  let n = 0;
   for (const [id, d] of Object.entries(world.drops)) {
-    if (d.born < cutoff) { delete world.drops[id]; markDirty(); broadcastAll({ t: 'dropdel', id }); }
+    if (!d.born) d.born = now();
+    else if (d.born < cutoff) { delete world.drops[id]; markDirty(); broadcastAll({ t: 'dropdel', id }); n++ }
   }
-}, 60_000).unref();
+  if (n) console.log(`Clearlag : ${n} objet(s) au sol supprimé(s) (2 min).`);
+}, 20_000).unref();
 
 // Sauvegarde périodique de sécurité (objets au sol, modifications en attente).
 setInterval(() => { if (saveDirty) saveWorld(); }, 20_000).unref();

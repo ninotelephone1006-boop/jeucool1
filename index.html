@@ -7,6 +7,8 @@ window.addEventListener('unhandledrejection',e=>show('❌ Erreur : '+(e.reason&&
 setTimeout(()=>{if(!window.__ready)show('❌ Le jeu ne démarre pas : Three.js n’a pas pu être chargé (vérifie ta connexion).')},8000)})();
 </script>
 <style>
+#tip{position:fixed;z-index:12;pointer-events:none;background:#000c;border:1px solid #fff4;border-radius:6px;padding:4px 8px;font-size:13px;line-height:1.25;white-space:nowrap;max-width:340px;overflow:hidden;display:none;box-shadow:0 2px 10px #000a}
+#tip small{display:block;font-size:11px;opacity:.75;white-space:normal}
 *{box-sizing:border-box}body{margin:0;overflow:hidden;font:14px system-ui,sans-serif;color:#fff;user-select:none}
 canvas#c{position:fixed;inset:0;width:100%;height:100%;filter:contrast(1.1) saturate(1.2)}
 .p{position:fixed;background:#0009;backdrop-filter:blur(6px);border-radius:12px;padding:14px;transition:opacity .35s,transform .35s}
@@ -243,7 +245,10 @@ const sky=new THREE.Mesh(new THREE.SphereGeometry(1200,48,24),skyM);sky.frustumC
 // palette JS (même couleurs que le shader) pour le brouillard / lumières
 const sstep=(a,b,x)=>{const t=cl((x-a)/(b-a),0,1);return t*t*(3-2*t)},mix3=(a,b,t)=>a.map((v,i)=>v+(b[i]-v)*t);
 const horizonRGB=sy=>{const d=sstep(-.12,.28,sy),S=Math.pow(cl(1-Math.abs(sy)/.4,0,1),1.5);return mix3(mix3([.09,.17,.36],[.70,.90,1],d),[1,.66,.28],S)};
-const base=new THREE.Mesh(new THREE.PlaneGeometry(6000,6000).rotateX(-PI/2),new THREE.MeshToonMaterial({color:0xf2f2f2,gradientMap:toonG}));base.position.y=-.05;base.receiveShadow=true;sc.add(base);
+// Sol lointain : une couronne blanche percée au centre (la carte 256×256) pour qu'aucune
+// nappe blanche ne recouvre les trous creusés dans le terrain.
+const base=new THREE.Group(),baseMat=new THREE.MeshToonMaterial({color:0xf2f2f2,gradientMap:toonG});
+[[6000,2872,0,-1564],[6000,2872,0,1564],[2872,256,-1564,0],[2872,256,1564,0]].forEach(([w,h,x,z])=>{const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h).rotateX(-PI/2),baseMat);m.position.set(x,-.05,z);m.receiveShadow=true;base.add(m)});sc.add(base);
 const T=window.T,N=T.N,W1=T.W,tg=new THREE.PlaneGeometry(256,256,N,N).rotateX(-PI/2);tg.setAttribute('color',new THREE.BufferAttribute(new Float32Array(W1*W1*3),3));tg.setAttribute('cls',new THREE.BufferAttribute(new Float32Array(W1*W1),1));
 const TC=['#f2f2f2','#4cb23c','#86582c','#f0dc92','#8a8a8f','#4a3524','#ffffff','#b5b5b5'].map(c=>new THREE.Color(c)),TN=['sol','herbe','terre','sable','pierre','boue','neige','béton'];
 const terr=new THREE.Mesh(tg,new THREE.MeshToonMaterial({vertexColors:true,gradientMap:toonG}));terr.receiveShadow=true;sc.add(terr);let tdirty=1;
@@ -570,6 +575,7 @@ function localWS(){const K='cw_world';let W;try{W=JSON.parse(localStorage[K]||'n
  const fx=m=>{if(m.t==='add')W.objs[m.o.id]=m.o;else if(m.t==='upd'&&W.objs[m.id])Object.assign(W.objs[m.id],m.p);else if(m.t==='del'){delete W.objs[m.id];delete W.jukes[m.id]}else if(m.t==='tex')W.tex[m.id]=m.d;else if(m.t==='drop')W.drops[m.d.id]=m.d;else if(m.t==='dropmove'&&W.drops[m.id]){W.drops[m.id].p=m.p;W.drops[m.id].v=m.v}else if(m.t==='dropdel')delete W.drops[m.id];else if(m.t==='juke'){if(m.stop)delete W.jukes[m.id];else W.jukes[m.id]=m}save()};
  ch.onmessage=e=>{const m=e.data;if(m.t==='op'){out(m);return}if(['add','upd','del','tex','drop','dropmove','dropdel','juke'].includes(m.t)){fx(m);out(m)}
   else if(m.t==='join'){if(!m.re&&self){ch.postMessage({t:'join',p:self,re:1});Object.values(W.jukes).forEach(j=>ch.postMessage(j))}out({t:'join',p:m.p})}else out(m)};
+ setInterval(()=>{const cut=Date.now()-DROP_TTL;let n=0;for(const k in W.drops){const d=W.drops[k];if(!d)continue;if(!d.born)d.born=Date.now();else if(d.born<cut){delete W.drops[k];n++;share({t:'dropdel',id:k})}}if(n)save()},15000);
  return{readyState:1,local:1,close(){ch.postMessage({t:'leave',id});ch.close()},send(s){const m=JSON.parse(s);
   if(m.t==='join'){self={id,name:String(m.name).slice(0,16),skin:m.skin,eyes:m.eyes,s:null};out({t:'init',id,pos:null,players:{},objs:W.objs,tex:W.tex,drops:W.drops,jukes:W.jukes,ops:[],h:Array.from(T.h),c:Array.from(T.c)});ch.postMessage({t:'join',p:self})}
   else if(m.t==='eyes'){self.eyes=m.e;ch.postMessage({t:'eyes',id,e:m.e})}else if(m.t==='p'){self.s=m.s;ch.postMessage({t:'p',id,s:m.s})}else if(m.t==='skin'){self.skin=m.skin;ch.postMessage({t:'skin',id,skin:m.skin})}
@@ -700,7 +706,18 @@ let cur=null,sel=0,invOpen=false,chatOpen=false;
 function itemDef(item){const k=typeof item==='string'?item:item?.k;if(!k)return['Objet inconnu','📦',1,'#999','Objet.'];if(!IT[k])IT[k]=[item?.model?.name||item?.name|| (k.startsWith('model:')?'Modèle 3D':nm(k)), '📦',item?.model?1:64,'#b7a2d8','Objet récupéré dans le monde.'];if(item?.model)IT[k][2]=1;return IT[k]}
 function cloneItem(item,n=item.n){const q={...item,n};if(item.model)q.model={...item.model,s:[...(item.model.s||[1,1,1])],r:[...(item.model.r||[0,0,0])],tx:[...(item.model.tx||[1,0,0,0])]};return q}
 for(const s of inv)if(s)itemDef(s);
-function slotEl(a,i,hot){const s=a[i],d=document.createElement('div');d.className='slot'+(hot&&i===sel?' sel':'');if(s){const def=itemDef(s);d.innerHTML=def[1];d.title=(s.name?s.name+' (CD)':s.model?.name||def[0])+' — '+def[4];if(s.n>1)d.innerHTML+=`<i>${s.n}</i>`}
+// Info-bulle au survol : nom de l'objet (les CD s'affichent en multicouleur).
+const tipEl=document.createElement('div');tipEl.id='tip';document.body.append(tipEl);
+const tesc=t=>String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function tipHTML(s){const d=itemDef(s);
+ if(s.k==='cd'){const t='Cd "'+String(s.name||(s.cid?'Sans nom':'Vierge')).slice(0,40)+'"',n=Math.max(1,t.length-1);
+  return t.split('').map((ch,i)=>`<span style="color:hsl(${Math.round(i*300/n)},95%,62%)">${tesc(ch)}</span>`).join('')}
+ return tesc(s.model?.name||d[0])+(s.n>1?` <span style="opacity:.85">×${s.n}</span>`:'')+(d[4]?`<small>${tesc(d[4])}</small>`:'')}
+function tipMove(e){const r=tipEl.getBoundingClientRect(),p=6;let x=e.clientX+14,y=e.clientY+16;if(x+r.width>innerWidth-p)x=Math.max(p,e.clientX-8-r.width);if(y+r.height>innerHeight-p)y=Math.max(p,e.clientY-8-r.height);tipEl.style.left=x+'px';tipEl.style.top=y+'px'}
+function tipShow(s,e){if(!s)return hideTip();if(tipEl.__s!==s||tipEl.__n!==s.n){tipEl.__s=s;tipEl.__n=s.n;tipEl.innerHTML=tipHTML(s)}tipEl.style.display='block';tipMove(e)}
+function hideTip(){tipEl.style.display='none';tipEl.__s=null}
+document.addEventListener('mousemove',e=>{const el=e.target?.closest?.('.slot');const s=el&&!el.closest('.hid')&&el.__s;if(s)tipShow(s,e);else if(tipEl.style.display==='block')hideTip()});
+function slotEl(a,i,hot){const s=a[i],d=document.createElement('div');d.__s=s;d.className='slot'+(hot&&i===sel?' sel':'');if(s){const def=itemDef(s);d.innerHTML=def[1];if(s.n>1)d.innerHTML+=`<i>${s.n}</i>`}
  d.onmousedown=e=>{e.stopPropagation();if(invOpen)sclick(a,i,e.button===2);else if(hot){sel=i;renderInv()}};d.oncontextmenu=e=>e.preventDefault();return d}
 function renderInv(){try{localStorage.inv=JSON.stringify(inv)}catch(e){}const f=(el,a,r0,r1,hot,w)=>{el.innerHTML='';for(let r=r0;r<r1;r+=w){const row=document.createElement('div');row.className='row';for(let i=r;i<Math.min(r+w,r1);i++)row.append(slotEl(a,i,hot));el.append(row)}};
  f($('#ig'),inv,9,36,0,9);f($('#hg'),inv,0,9,1,9);f($('#hot'),inv,0,9,1,9);f($('#eg'),eq,0,4,0,1);$('#cur').innerHTML=cur?itemDef(cur)[1]+(cur.n>1?cur.n:''):'';held();chR()}
@@ -723,15 +740,21 @@ function useItem(h,sh){if(typeof sh!=='boolean')sh=!!K.Shift;if(h&&h.id&&OB[h.id
  const s=inv[sel];if(!s)return;const d=itemDef(s);me.c.st.use=.4;if(s.k==='cd'){useCD(s,null,sh);return}if(s.k==='feu_artifice'){fw();if(me.c.st.air&&eq.some(q=>q?.k==='elytre'))me.vy=14}const dec=()=>{if(gm==='survival'){s.n--;if(!s.n)inv[sel]=null;renderInv()}};
  if(s.model?.mdl&&h&&h.p){const gq=gridPlace(h,'model');if(gq){pendSel=1;send({t:'add',o:{type:'model',mdl:s.model.mdl,fmt:s.model.fmt||'glb',name:s.model.name||'Modèle 3D',p:gq.p,r:[...(s.model.r||gq.r)],s:[...(s.model.s||[1,1,1])],tex:s.model.tex??null,tx:[...(s.model.tx||[1,0,0,0])]}});dec()}return}
  if(FN[s.k]){FN[s.k](dec,h||{});return}if(d[5])dec();else if(s.k.startsWith('o:')&&h&&h.p){const gq=gridPlace(h,s.k.slice(2));if(gq){pendSel=1;send({t:'add',o:{type:s.k.slice(2),p:gq.p,r:gq.r,s:[1,1,1],tex:null,tx:[1,0,0,0]}});dec()}}}
+// Clearlag : un objet jeté au sol disparaît au bout de 2 minutes.
+const DROP_TTL=2*60*1000;let clN=0,clT=null;
+function clearlagTick(){clN++;if(!clT)clT=setTimeout(()=>{log('🧹 '+clN+' objet(s) au sol ont disparu (clearlag 2 min).');clN=0;clT=null},600)}
 const dropMaps={};
 function dropTexture(item){const def=itemDef(item),key=[item.k,item.name||'',item.n||1].join('|');if(dropMaps[key])return dropMaps[key];const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d');x.clearRect(0,0,64,64);x.fillStyle='#ffffff';x.textAlign='center';x.textBaseline='middle';const m=String(def[1]||'📦').match(/src=["']([^"']+)["']/);if(m){const im=new Image();im.onload=()=>{x.clearRect(0,0,64,64);x.drawImage(im,5,5,54,54);if(item.n>1){x.fillStyle='#111';x.font='bold 16px system-ui';x.textAlign='right';x.fillText(String(item.n),62,60)}tex.needsUpdate=true};im.src=m[1]}else{x.font='46px system-ui,"Apple Color Emoji","Segoe UI Emoji"';x.fillText(String(def[1]||'📦'),32,33);if(item.n>1){x.fillStyle='#111';x.font='bold 16px system-ui';x.textAlign='right';x.fillText(String(item.n),62,60)}}const tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;tex.magFilter=THREE.NearestFilter;return dropMaps[key]=tex}
-function addDrop(raw){if(!raw?.id||!Array.isArray(raw.p)||!raw.item)return;const old=DROPS[raw.id];if(old){moveDrop({id:raw.id,p:raw.p,v:raw.v});return}itemDef(raw.item);const g=new THREE.Group(),shadow=new THREE.Mesh(new THREE.CircleGeometry(.16,16).rotateX(-PI/2),new THREE.MeshBasicMaterial({color:0x111111,transparent:true,opacity:.25,depthWrite:false}));shadow.position.y=-.1;g.add(shadow);const mat=new THREE.MeshBasicMaterial({map:dropTexture(raw.item),transparent:true,side:THREE.DoubleSide,depthWrite:false});for(const a of[0,PI/2]){const card=new THREE.Mesh(new THREE.PlaneGeometry(.34,.34),mat);card.position.y=.16;card.rotation.y=a;g.add(card)}g.renderOrder=5;sc.add(g);const p=new THREE.Vector3(...raw.p),v=new THREE.Vector3(...(raw.v||[0,0,0]));DROPS[raw.id]={id:raw.id,owner:raw.owner,item:cloneItem(raw.item),p,v,netP:p.clone(),netV:v.clone(),g,phase:Math.random()*PI*2,lastSent:0,pickupAt:0,pendingAt:0,pickupAfter:raw.pickupAfter||((raw.born||Date.now())+600)};g.position.copy(p)}
+function addDrop(raw){if(!raw?.id||!Array.isArray(raw.p)||!raw.item)return;const old=DROPS[raw.id];if(old){moveDrop({id:raw.id,p:raw.p,v:raw.v});return}itemDef(raw.item);const g=new THREE.Group(),shadow=new THREE.Mesh(new THREE.CircleGeometry(.16,16).rotateX(-PI/2),new THREE.MeshBasicMaterial({color:0x111111,transparent:true,opacity:.25,depthWrite:false}));shadow.position.y=-.1;g.add(shadow);const mat=new THREE.MeshBasicMaterial({map:dropTexture(raw.item),transparent:true,side:THREE.DoubleSide,depthWrite:false});for(const a of[0,PI/2]){const card=new THREE.Mesh(new THREE.PlaneGeometry(.34,.34),mat);card.position.y=.16;card.rotation.y=a;g.add(card)}g.renderOrder=5;sc.add(g);const p=new THREE.Vector3(...raw.p),v=new THREE.Vector3(...(raw.v||[0,0,0]));DROPS[raw.id]={id:raw.id,owner:raw.owner,item:cloneItem(raw.item),p,v,netP:p.clone(),netV:v.clone(),g,phase:Math.random()*PI*2,lastSent:0,pickupAt:0,pendingAt:0,born:+raw.born||Date.now(),mats:[{m:mat,o:1},{m:shadow.material,o:.25}],pickupAfter:raw.pickupAfter||((raw.born||Date.now())+600)};g.position.copy(p)}
 function moveDrop(m){const d=DROPS[m.id];if(!d||!Array.isArray(m.p))return;d.netP.set(+m.p[0]||0,+m.p[1]||0,+m.p[2]||0);if(Array.isArray(m.v))d.netV.set(+m.v[0]||0,+m.v[1]||0,+m.v[2]||0);d.lastNet=performance.now();if(d.netP.distanceTo(d.p)>4)d.p.copy(d.netP)}
 function removeDrop(id){const d=DROPS[id];if(!d)return;sc.remove(d.g);d.g.traverse(q=>{if(q.geometry)q.geometry.dispose();if(q.material&&!Array.isArray(q.material)&&q.material!==dropMaps[d.item.k])q.material.dispose()});delete DROPS[id]}
 function throwItem(item){if(!item)return;const fwd=[-Math.sin(yaw),-Math.cos(yaw)];send({t:'drop',item:cloneItem(item),p:[me.pos.x,me.pos.y+1,me.pos.z],v:[fwd[0]*2.4,3.2,fwd[1]*2.4]})}
 function dropSelected(count=1){const s=inv[sel];if(!s)return;const n=Math.min(s.n,count),it=cloneItem(s,n);throwItem(it);s.n-=n;if(!s.n)inv[sel]=null;renderInv()}
 const _dropTarget=new THREE.Vector3();
-function tickDrops(dt){const now=performance.now();for(const id in DROPS){const d=DROPS[id];d.v.y-=18*dt;d.v.x*=Math.exp(-.12*dt);d.v.z*=Math.exp(-.12*dt);d.p.addScaledVector(d.v,dt);const floor=T.get(d.p.x,d.p.z)+.12;if(d.p.y<floor){d.p.y=floor;if(Math.abs(d.v.y)>1.1)d.v.y=Math.abs(d.v.y)*.24;else d.v.y=0;d.v.x*=.62;d.v.z*=.62}
+function tickDrops(dt){const now=performance.now(),ts=Date.now();for(const id in DROPS){const d=DROPS[id];const age=ts-d.born;
+ if(age>DROP_TTL){removeDrop(id);clearlagTick();continue}
+ if(age>DROP_TTL-8000){const k=Math.max(.02,1-(age-(DROP_TTL-8000))/8000);d.g.scale.setScalar(k);d.mats.forEach(m=>m.m.opacity=m.o*k)}
+ d.v.y-=18*dt;d.v.x*=Math.exp(-.12*dt);d.v.z*=Math.exp(-.12*dt);d.p.addScaledVector(d.v,dt);const floor=T.get(d.p.x,d.p.z)+.12;if(d.p.y<floor){d.p.y=floor;if(Math.abs(d.v.y)>1.1)d.v.y=Math.abs(d.v.y)*.24;else d.v.y=0;d.v.x*=.62;d.v.z*=.62}
  if(d.lastNet){const age=Math.min((now-d.lastNet)/1000,.25);_dropTarget.copy(d.netP).addScaledVector(d.netV,age);_dropTarget.y-=9*age*age;d.p.lerp(_dropTarget,1-Math.exp(-dt*9))}d.g.position.set(d.p.x,d.p.y+.025+Math.sin(now*.004+d.phase)*.045,d.p.z);d.g.rotation.y+=dt*1.8;
  if(ws?.local&&d.owner===myId&&now-d.lastSent>150&&Math.hypot(d.v.x,d.v.y,d.v.z)>.035){d.lastSent=now;send({t:'dropmove',id:d.id,p:d.p.toArray(),v:d.v.toArray()})}
  if(d.pendingAt&&now-d.pendingAt>1800)d.pendingAt=0;if(Date.now()>=d.pickupAfter&&now>=d.pickupAt&&!d.pendingAt&&d.p.distanceTo(me.pos)<1.35){d.pendingAt=now;d.pickupAt=now+450;send({t:'pickup',id:d.id})}}}
@@ -1168,7 +1191,7 @@ onkeydown=e=>{const ae=document.activeElement;
 onkeyup=e=>{K[e.key.length===1?e.key.toLowerCase():e.key]=0;if(e.code==='KeyC')K.c=0};onblur=()=>{for(const k in K)K[k]=0};
 function putCursorBack(){if(!cur)return;const item=cloneItem(cur);cur=null;const left=giveItem(item);if(left>0)throwItem({...item,n:left});renderInv()}
 function syncInvMode(){const creative=gm==='creative';$('#cgw').style.display=creative?'block':'none';$('#trashWrap').style.display=creative?'flex':'none';if(invOpen)cg()}
-function toggleInv(){if(invOpen&&cur)putCursorBack();invOpen=!invOpen;if(invOpen)unlock();$('#inv').classList.toggle('hid',!invOpen);if(invOpen)syncInvMode();else{$('#cq').blur();renderInv()}}
+function toggleInv(){if(invOpen&&cur)putCursorBack();invOpen=!invOpen;hideTip();if(invOpen)unlock();$('#inv').classList.toggle('hid',!invOpen);if(invOpen)syncInvMode();else{$('#cq').blur();renderInv()}}
 function pick(e){document.pointerLockElement?ndc.set(0,0):ndc.set(e.clientX/innerWidth*2-1,-(e.clientY/innerHeight)*2+1);rc.setFromCamera(ndc,cam);rc.far=300;let g=null;const ray=rc.ray,p=new THREE.Vector3();
  for(let t=0;t<300;t+=.5){p.copy(ray.origin).addScaledVector(ray.direction,t);if(p.y<T.get(p.x,p.z)){let a=t-.5,b=t;for(let i=0;i<8;i++){const m=(a+b)/2;p.copy(ray.origin).addScaledVector(ray.direction,m);p.y<T.get(p.x,p.z)?b=m:a=m}g={p:p.clone(),d:b};break}}
  const roots=Object.values(OB).filter(b=>b.o.vis!==0||build).map(b=>b.g),hit=rc.intersectObjects(roots,true)[0];let id=null,h=null;if(hit){let o=hit.object;while(o&&!o.userData.id)o=o.parent;if(o&&(!g||hit.distance<g.d)){id=o.userData.id;h=hit}}return{g,id,h,p:h?h.point:g?.p}}
