@@ -82,3 +82,82 @@ Les fichiers du dossier `Sounds/` sont utilisés par le jeu :
 - `CriticalHit.mp3` pour un coup critique.
 
 Le réglage **Effets sonores** (et le volume général) contrôle leur niveau. GitHub Pages sert directement les fichiers du dossier ; `server.js` les expose aussi sur `/Sounds/` pour le lancement local ou l’hébergement Node.js.
+
+---
+
+## 12. Blocs Minecraft (nouveau système de blocs)
+
+Tout le système de blocs et d'objets du jeu a été remplacé par **les blocs de
+Minecraft** : ce ne sont plus des cubes colorés générés par code, mais les
+textures et les formes officielles du jeu, avec leurs vraies propriétés.
+
+- **1 047 blocs** (Minecraft 1.21.4) : pierre, planches, escaliers, dalles,
+  vitres, fleurs, minerais, laines, bétons, terres cuites, redstone, coffres,
+  fourneaux, fanaux, champignons, coraux… avec leurs **noms français officiels**.
+- **Textures officielles** : les 1 039 fichiers PNG 16×16 sont dans
+  `textures/minecraft/blocks/`, et regroupés dans une **feuille de textures**
+  `textures/minecraft/atlas.png` (792 tuiles) chargée en une seule image par le jeu.
+- **Propriétés réelles** de chaque bloc : solide ou traversable, **émission de
+  lumière** (0-15), dureté, résistance, outil efficace, et sa **forme exacte**
+  (dalle = demi-bloc, escalier = deux pavés, barrière = poteau, torche, fleur en croix…).
+
+### Inventaire créatif (touche E, mode créatif)
+Les blocs sont rangés par onglets, comme dans Minecraft :
+
+| Onglet | Blocs |
+|---|---|
+| 🧱 Blocs de construction | 178 |
+| 🌿 Blocs naturels | 234 |
+| 🪨 Pierres & Minerais | 169 |
+| 🪴 Décorations | 185 |
+| 🔴 Redstone & Mécanismes | 66 |
+| 🎨 Laine, Béton & Couleurs | 145 |
+| 🧰 Fonctionnel | 54 |
+| ✨ Spéciaux | 16 |
+
+Chaque onglet affiche une **vignette isométrique du bloc** (la même icône que
+l'inventaire créatif de Minecraft, dessinée en 3D puis mise en cache), son nom
+français, et une infobulle avec ses propriétés.
+
+- **Clic** : la pile part dans l'inventaire.
+- **Clic droit** : le bloc est **équipé directement dans la barre d'accès rapide**
+  (touches 1 à 9) et apparaît **en main** en 3D.
+- Le champ 🔎 cherche dans **tous** les blocs (français ou identifiant Minecraft).
+
+### Pose dans le monde
+- **Clic droit** pose le bloc sur la grille, exactement à l'endroit visé
+  (le dessus du bloc, ou la face latérale si tu vises un côté).
+- **Orientation comme dans Minecraft** : four, distributeur, coffre, citrouille…
+  se tournent **vers toi** ; escaliers, pistons, répéteurs et observateurs
+  s'orientent dans **l'axe de ton regard** ; les bûches, piliers et blocs à axe
+  (basalte, quartz, chaînes…) se **couchent dans l'axe de la face visée**.
+- **Casse** : le temps de casse suit la dureté officielle du bloc et l'outil tenu
+  (pioche, hache, pelle, houe) ; en créatif, un clic suffit.
+- **Collision** : chaque bloc utilise sa vraie boîte (on monte sur une dalle,
+  on passe sous une barrière) ; fleurs, torches et eau sont traversables.
+- **Torches, fanaux, lave, champignons lumineux…** éclairent réellement le monde.
+- Les **objets au sol** affichent la vignette du bloc, et l'eau/lave/glace/verre
+  teinté sont translucides.
+
+### Anciens blocs
+Les blocs de l'ancienne version (pierre_lisse, planche_chêne, laine_rouge, …) sont
+**conservés en alias** : une carte déjà sauvegardée s'affiche avec le bloc
+Minecraft équivalent au lieu de disparaître. De même, les objets « planche »,
+« pierre », « bois »… de l'ancien inventaire deviennent des blocs Minecraft.
+
+### Régénérer les données de blocs (optionnel)
+```bash
+npm run fetch:mcdata   # télécharge textures + modèles + traductions Minecraft
+npm run build:blocks   # reconstruit l'atlas, mc/blocks.js et l'atlas du terrain
+npm test               # vérifie les 1 047 blocs (données, atlas, géométrie)
+npm run preview:blocks # planche d'aperçu de 145 blocs emblématiques
+```
+
+Fichiers concernés : `mc/blocks.js` (données des blocs), `mc/geom.js`
+(géométrie et orientation, partagée avec les outils), `textures/minecraft/`
+(textures), `tools/build-mc-blocks.mjs` (générateur), `tools/test-*.mjs` (tests).
+Le sol du monde utilise lui aussi les textures Minecraft
+(`textures/minecraft/terrain-atlas.png` : herbe, terre, sable, pierre, boue,
+neige, béton, calcaire), teinté par biome comme dans le jeu.
+Le serveur (`server.js`) sert aussi ces fichiers, donc le jeu fonctionne en
+local (`npm start`) comme sur GitHub Pages.

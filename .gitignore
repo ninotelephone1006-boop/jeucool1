@@ -3,3 +3,7 @@ world-save.json
 world-save.json.tmp
 npm-debug.log*
 .DS_Store
+
+# Sources Minecraft téléchargées (textures + modèles + traductions) :
+# régénérables avec « npm run fetch:mcdata », ~8 Mo.
+tools/mcdata/
