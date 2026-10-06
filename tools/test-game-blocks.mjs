@@ -95,7 +95,7 @@ if (!badUv && !badN) console.log('   ✅ coordonnées de texture et normales cor
 /* 3. icônes et vignettes HTML */
 const html1 = api.mcIconHTML('stone');
 if (!/^<img class="mci"/.test(html1)) fail('mcIconHTML ne produit pas de balise image : ' + html1.slice(0, 60));
-if (!/src="data:image\/png/.test(api.mcIconHTML('oak_planks'))) fail('icône sans données d’image');
+if (!/src="(?:data:image\/png|textures\/minecraft\/blocks\/[^"]+\.png)"/.test(api.mcIconHTML('oak_planks'))) fail('icône sans source exploitable');
 console.log('   ✅ vignettes HTML prêtes (inventaire, barre rapide, bibliothèque)');
 
 /* 4. anciens blocs → blocs Minecraft */

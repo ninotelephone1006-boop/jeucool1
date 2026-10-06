@@ -115,9 +115,9 @@ Les blocs sont rangés par onglets, comme dans Minecraft :
 | 🧰 Fonctionnel | 54 |
 | ✨ Spéciaux | 16 |
 
-Chaque onglet affiche une **vignette isométrique du bloc** (la même icône que
-l'inventaire créatif de Minecraft, dessinée en 3D puis mise en cache), son nom
-français, et une infobulle avec ses propriétés.
+Chaque onglet affiche la **texture officielle du bloc** (chargée directement
+depuis `textures/minecraft/blocks/` pour être visible immédiatement dans
+l’inventaire), son nom français, et une infobulle avec ses propriétés.
 
 - **Clic** : la pile part dans l'inventaire.
 - **Clic droit** : le bloc est **équipé directement dans la barre d'accès rapide**
