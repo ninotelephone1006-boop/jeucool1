@@ -39,9 +39,41 @@ function serveGame(res) {
   }
 }
 
+// Fichiers statiques du jeu : blocs Minecraft (mc/), textures, sons, outils.
+const STATIC_DIRS = new Map([
+  ['/mc/', ['mc', new Map([['.js', 'text/javascript; charset=utf-8'], ['.json', 'application/json; charset=utf-8']])]],
+  ['/textures/', ['textures', new Map([['.png', 'image/png'], ['.json', 'application/json; charset=utf-8']])]],
+  ['/Sounds/', ['Sounds', new Map([['.mp3', 'audio/mpeg'], ['.ogg', 'audio/ogg'], ['.wav', 'audio/wav']])]],
+  ['/tools/', ['tools', new Map([['.png', 'image/png'], ['.json', 'application/json; charset=utf-8']])]]
+]);
+function serveStatic(url, req, res) {
+  for (const [prefix, [dir, types]] of STATIC_DIRS) {
+    if (!url.startsWith(prefix)) continue;
+    const rel = decodeURIComponent(url.slice(prefix.length));
+    if (!rel || rel.includes('..') || rel.startsWith('/') || rel.includes('\\')) break;
+    const type = types.get(path.extname(rel).toLowerCase());
+    if (!type) break;
+    return fs.readFile(path.join(__dirname, dir, rel), (err, data) => {
+      if (err) {
+        res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+        return res.end('Fichier introuvable.');
+      }
+      res.writeHead(200, {
+        'Content-Type': type,
+        'Content-Length': data.length,
+        'Cache-Control': 'public, max-age=3600',
+        'X-Content-Type-Options': 'nosniff'
+      });
+      res.end(req.method === 'HEAD' ? undefined : data);
+    });
+  }
+  return false;
+}
+
 const server = http.createServer((req, res) => {
   const url = String(req.url || '/').split('?')[0];
   if (url === '/' || url === '/index.html') return serveGame(res);
+  if (serveStatic(url, req, res) !== false) return;
   const soundFile = SOUND_ASSETS.get(url);
   if (soundFile && (req.method === 'GET' || req.method === 'HEAD')) {
     return fs.readFile(path.join(__dirname, 'Sounds', soundFile), (err, data) => {

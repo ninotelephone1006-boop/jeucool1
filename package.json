@@ -1,11 +1,20 @@
 {
   "name": "community-world-server",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "build:blocks": "node tools/build-mc-blocks.mjs",
+    "fetch:mcdata": "bash tools/fetch-mcdata.sh",
+    "test": "node tools/test-blocks.mjs && node tools/test-game-blocks.mjs",
+    "test:blocks": "node tools/test-blocks.mjs",
+    "test:game": "node tools/test-game-blocks.mjs",
+    "preview:blocks": "node tools/preview-blocks.mjs"
   },
   "dependencies": {
     "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "pngjs": "^7.0.0"
   }
 }

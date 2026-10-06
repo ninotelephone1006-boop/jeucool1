@@ -1,5 +1,8 @@
 <!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>COMMUNITY WORLD — BETA</title>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script>
+<!-- Blocs Minecraft : données (1047 blocs, textures + propriétés) et géométrie -->
+<script src="mc/blocks.js"></script>
+<script src="mc/geom.js"></script>
 <script>
 (function(){const show=t=>{const m=document.getElementById('msg');if(m)m.textContent=t};
 window.addEventListener('error',e=>{if(e.target&&e.target!==window&&e.target.tagName==='SCRIPT')show('❌ Impossible de charger Three.js (connexion internet ?).');else if(e.message)show('❌ Erreur : '+e.message)},true);
@@ -19,8 +22,15 @@ button:hover{background:#5870a8}button.on{background:#e8a12e;color:#000}
 #menu button{display:block;width:100%}label{display:block;margin:6px 0;text-align:left}input[type=range]{width:100%}
 #hot{left:50%;bottom:10px;transform:translateX(-50%);display:flex;padding:5px;gap:3px}
 .slot{width:44px;height:44px;background:#222c;border:2px solid #666;border-radius:4px;position:relative;font-size:24px;text-align:center;line-height:40px;cursor:pointer}
+/* icônes de blocs Minecraft (vignettes isométriques de l'atlas) */
+.mci{width:100%;height:100%;display:block;image-rendering:pixelated;pointer-events:none}
+.slot>.mci{position:absolute;inset:0;border-radius:2px}
+#cur .mci{position:static;width:34px;height:34px}
+#cg .slot:hover{border-color:#ffd45e;background:#2c3a58}
+#cg::-webkit-scrollbar{width:10px}#cg::-webkit-scrollbar-thumb{background:#4a5c86;border-radius:6px}#cg::-webkit-scrollbar-track{background:#00000033}
+#bp .card .mci{width:32px;height:32px;margin:0 auto}
 .slot.sel{border-color:#fff;box-shadow:0 0 8px #fff}.slot i{position:absolute;right:3px;bottom:0;font:bold 12px sans-serif}
-#inv{inset:0;margin:auto;width:520px;height:fit-content}.row{display:flex;gap:3px;margin:2px 0}
+#inv{inset:0;margin:auto;width:600px;height:fit-content}.row{display:flex;gap:3px;margin:2px 0}
 #invMain{display:flex;align-items:flex-start;gap:8px}#trashWrap{display:none;min-width:54px;flex-direction:column;align-items:center;gap:4px;padding-top:2px}
 #trashBin{width:48px;height:48px;line-height:44px;background:#501e25;border-color:#a54;font-size:26px}#trashBin:hover{background:#822d37;border-color:#f88}#trashWrap small{font-size:10px;line-height:1;opacity:.9}
 #chat{left:10px;bottom:70px;width:420px;background:none;backdrop-filter:none;padding:0;pointer-events:none}
@@ -93,7 +103,8 @@ button:disabled{opacity:.45;cursor:not-allowed}
 <div id="hot" class="p"></div>
 <div id="chat" class="p"><div id="log"></div><input type="text" id="ci" class="hid" maxlength="200" placeholder="Message ou /build" style="cursor:text"></div>
 <div id="inv" class="p hid"><h3 style="margin:0 0 6px">INVENTAIRE</h3><div id="invMain"><div id="ig"></div><div id="trashWrap"><div id="trashBin" class="slot" role="button" tabindex="0" title="Supprimer l’objet tenu ou sélectionné" aria-label="Corbeille : supprimer l’objet tenu ou sélectionné">🗑️</div><small>Corbeille</small></div></div><div style="display:flex;gap:12px;margin:8px 0"><div><div style="font-size:12px">ÉQUIPEMENT</div><div id="eg"></div></div><canvas id="pv2" width="160" height="200"></canvas></div><div id="hg"></div><div id="chw" style="display:none"><b>📦 Coffre</b> <span style="font-size:11px;opacity:.85">27 emplacements · Maj + clic : transfert rapide</span><div id="chg" style="margin-top:4px"></div></div>
-<div id="cgw" style="display:none"><input id="cq" type="text" placeholder="🔎 Mode créatif : objets autorisés…" style="width:100%;cursor:text"><div id="ct" class="g" style="margin-top:4px"></div><div id="cg" style="max-height:250px;overflow:auto;display:flex;flex-wrap:wrap;gap:3px;margin-top:4px"></div></div><div style="font-size:11px">Clic : prendre/poser · Clic droit : séparer/poser 1 · Hors des cases : jeter la pile · Dans un coffre : Maj + clic pour tout transférer d’un côté ou de l’autre · En créatif, prends un objet puis clique sur la corbeille pour le supprimer.</div></div>
+<div id="cgw" style="display:none"><input id="cq" type="text" placeholder="🔎 Chercher un bloc (planches, pierre, laine, coffre…)" style="width:100%;cursor:text"><div id="ct" class="g" style="margin-top:4px"></div><div id="cg" style="max-height:min(46vh,360px);overflow:auto;display:flex;flex-wrap:wrap;gap:3px;margin-top:4px"></div>
+<div class="hint" style="font-size:11px">🧱 <b>Inventaire créatif</b> : tous les blocs de Minecraft, classés par catégorie · <b>clic</b> = prendre la pile · <b>clic droit</b> = l’équiper directement dans la barre d’accès rapide.</div></div><div style="font-size:11px">Clic : prendre/poser · Clic droit : séparer/poser 1 · Hors des cases : jeter la pile · Dans un coffre : Maj + clic pour tout transférer d’un côté ou de l’autre · En créatif, prends un objet puis clique sur la corbeille pour le supprimer.</div></div>
 <div id="bt" class="p hid"></div><div id="pp" class="p hid"></div><div id="brk"><i></i></div>
 <div id="cur"></div><div id="tip"></div><div id="xh"></div><div id="zhud"></div><div id="ztg"></div><div id="cmdout"></div>
 <div id="eyes" class="p hid" style="inset:0;margin:auto;width:360px;height:fit-content;text-align:center"><h2>👁 PAUPIÈRES</h2><canvas id="pv3" class="pv" width="260" height="140"></canvas><label><input type="checkbox" id="eon"> Paupières activées (clignement)</label><div class="hint" style="margin:6px 0">Clique ou glisse sur le visage pour sélectionner les pixels de tes yeux. Quand tu clignes, ces pixels prennent la couleur des paupières.</div><canvas id="ezone" width="256" height="256" style="width:256px;height:256px;cursor:crosshair;touch-action:none;border:2px solid #666;border-radius:4px"></canvas><label>Couleur des paupières <input type="color" id="elc"></label><div><button id="epip">🎨 Pipette</button> <button id="eclr">Tout effacer</button></div><div id="epm" class="hint"></div><button class="back">RETOUR</button></div>
@@ -364,6 +375,277 @@ const prevs=[];function mkPrev(el){const r=new THREE.WebGLRenderer({canvas:el,al
 mkPrev($('#pv1'));mkPrev($('#pv2'));mkPrev($('#pv3'));{const p=prevs.at(-1);p.yaw=0;p.c.position.set(0,1.58,1.5);p.c.lookAt(0,1.55,0)}mkPrev($('#pv4'));{const p=prevs.at(-1);p.yaw=.55;p.c.position.set(0,1.6,1.75);p.c.lookAt(0,1.57,0)}
 // aperçu de la cape : vue de dos, dans le panneau « MA CAPE »
 mkPrev($('#pvCape'));{const p=prevs.at(-1);p.yaw=PI;p.c.position.set(0,1.1,4.4);p.c.lookAt(0,1.02,0)}
+/* == MC-BLOCS:DEBUT =========================================================
+ *  BLOCS MINECRAFT — le jeu utilise désormais les blocs officiels de Minecraft
+ * ---------------------------------------------------------------------------
+ *  Données    : mc/blocks.js   (1047 blocs, générés par tools/build-mc-blocks.mjs)
+ *  Géométrie  : mc/geom.js     (même code que l'outil d'aperçu)
+ *  Textures   : textures/minecraft/atlas.png (+ le dossier complet dans
+ *               textures/minecraft/blocks/ pour ceux qui veulent les fichiers)
+ * =========================================================================== */
+const MCB = window.MC_BLOCKS || [];
+const MCATLAS = window.MC_ATLAS || { file: '', tile: 16, cols: 1, rows: 1, w: 16, h: 16, idx: {} };
+const MCI = new Map(MCB.map(b => [b.id, b]));
+const isMCB = t => MCI.has(t);
+/* Les blocs de l’ancienne version du jeu sont affichés avec le bloc Minecraft
+ * équivalent : les cartes déjà sauvegardées restent intactes et jouables. */
+const LEGACY = {
+  pierre_lisse: 'stone', granit: 'granite', diorite: 'diorite', 'andésite': 'andesite', basalte: 'basalt',
+  calcaire: 'calcite', 'grès': 'sandstone', ardoise: 'deepslate', obsidienne: 'obsidian',
+  marbre_blanc: 'diorite', marbre_noir: 'blackstone', gravier: 'gravel', 'béton_gris': 'gray_concrete', tuf: 'tuff',
+  terre: 'dirt', herbe_bloc: 'grass_block', sable_bloc: 'sand', sable_rouge: 'red_sand', argile: 'clay',
+  boue_bloc: 'mud', neige_bloc: 'snow_block', glace_bloc: 'ice',
+  brique_rouge: 'bricks', brique_pierre: 'stone_bricks', brique_sable: 'sandstone', brique_noire: 'blackstone',
+  brique_bleue: 'prismarine', brique_verte: 'mossy_stone_bricks', 'brique_dorée': 'gold_block',
+  brique_nether: 'nether_bricks', brique_blanche: 'quartz_block', brique_jaune: 'sandstone',
+  'planche_chêne': 'oak_planks', planche_sapin: 'spruce_planks', planche_bouleau: 'birch_planks',
+  planche_acajou: 'acacia_planks', 'planche_ébène': 'dark_oak_planks', planche_cerisier: 'cherry_planks',
+  'tronc_chêne': 'oak_log', tronc_bouleau: 'birch_log', tronc_sapin: 'spruce_log', bambou: 'bamboo_block',
+  parquet: 'oak_planks', caisse_bois: 'oak_planks',
+  'béton_rouge': 'red_concrete', 'béton_bleu': 'blue_concrete', 'béton_vert': 'green_concrete',
+  'béton_jaune': 'yellow_concrete', 'béton_orange': 'orange_concrete', 'béton_violet': 'purple_concrete',
+  'béton_rose': 'pink_concrete', 'béton_noir': 'black_concrete', 'béton_blanc': 'white_concrete',
+  'béton_cyan': 'cyan_concrete',
+  laine_blanche: 'white_wool', laine_rouge: 'red_wool', laine_bleue: 'blue_wool', laine_verte: 'green_wool',
+  laine_jaune: 'yellow_wool', laine_noire: 'black_wool', laine_rose: 'pink_wool', laine_cyan: 'cyan_wool',
+  laine_orange: 'orange_wool', laine_violette: 'purple_wool',
+  minerai_charbon: 'coal_ore', minerai_fer: 'iron_ore', minerai_or: 'gold_ore', minerai_diamant: 'diamond_ore',
+  'minerai_émeraude': 'emerald_ore', minerai_rubis: 'redstone_ore', minerai_lapis: 'lapis_ore',
+  minerai_cuivre: 'copper_ore',
+  bloc_fer: 'iron_block', bloc_or: 'gold_block', bloc_diamant: 'diamond_block', bloc_cuivre: 'copper_block',
+  'bloc_émeraude': 'emerald_block', 'tôle': 'iron_block', grille_métal: 'iron_bars', circuit: 'target',
+  'néon_bleu': 'sea_lantern', 'néon_rose': 'shroomlight',
+  verre_bloc: 'glass', 'verre_teinté': 'tinted_glass', lave_bloc: 'lava', eau_bloc: 'water',
+  feuilles_bloc: 'oak_leaves', feuilles_automne: 'mangrove_leaves', foin: 'hay_block',
+  citrouille: 'pumpkin', 'pastèque_bloc': 'melon', miel_bloc: 'honey_block', slime_bloc: 'slime_block',
+  'bibliothèque': 'bookshelf', carrelage_blanc: 'quartz_block', damier: 'black_concrete',
+  pois_rouges: 'white_wool', rayures_bleues: 'blue_wool', 'tnt_déco': 'tnt', 'pavé': 'stone_bricks'
+};
+const mcId = t => (isMCB(t) ? t : (LEGACY[t] || null));
+const mcDef = t => { const i = mcId(t); return i ? MCI.get(i) : null; };
+const MC_CATS = window.MC_CATS || [];
+const MC_CATNAME = Object.fromEntries(MC_CATS);
+
+/* ---------- atlas de textures (une seule image pour tous les blocs) ---------- */
+const mcAtlas = Object.assign({}, MCATLAS);
+mcAtlas.ready = 0;
+const mcTex = new THREE.TextureLoader().load(MCATLAS.file, t => {
+  t.colorSpace = THREE.SRGBColorSpace; t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter;
+  t.generateMipmaps = false; t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping; t.needsUpdate = true;
+  mcAtlas.ready = 1;
+}, null, () => { try { log('❌ textures/minecraft/atlas.png introuvable : les blocs Minecraft ne peuvent pas s’afficher.'); } catch (e) { } });
+
+/* un matériau par classe alpha : opaque / découpe / translucide */
+const mcMat = [0, 1, 2].map(pix =>
+  pix === 2 ? new THREE.MeshLambertMaterial({ map: mcTex, transparent: true, opacity: .82, side: THREE.DoubleSide })
+    : pix === 1 ? new THREE.MeshLambertMaterial({ map: mcTex, alphaTest: .5, side: THREE.DoubleSide })
+      : new THREE.MeshLambertMaterial({ map: mcTex }));
+/* éclairage à plat des icônes (comme l’inventaire créatif du jeu) */
+const MC_FACE_LIGHT = { u: 1, d: .5, n: .8, s: .8, e: .6, w: .6 };
+
+/* ---------- géométrie (mise en cache : un bloc = un maillage partagé) ---------- */
+const mcGeo = new Map();
+function mcGeometry(id) {
+  if (mcGeo.has(id)) return mcGeo.get(id);
+  const def = MCI.get(id);
+  if (!def) return null;
+  const g = window.MCGeom.block(def, mcAtlas);
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(g.position, 3));
+  geo.setAttribute('normal', new THREE.BufferAttribute(g.normal, 3));
+  geo.setAttribute('uv', new THREE.BufferAttribute(g.uv, 2));
+  geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(g.count * 3), 3));
+  geo.computeBoundingSphere();
+  geo.userData = { box: [g.min, g.max], count: g.count };
+  mcGeo.set(id, geo);
+  return geo;
+}
+/* couleurs par face, pour les icônes (attribut « color ») */
+function mcPaintVertexColors(geo) {
+  const col = geo.getAttribute('color');
+  if (col.userData.painted) return geo;
+  const nor = geo.getAttribute('normal');
+  for (let i = 0; i < col.count; i++) {
+    const x = nor.getX(i), y = nor.getY(i), z = nor.getZ(i);
+    const k = Math.abs(y) > .5 ? (y > 0 ? MC_FACE_LIGHT.u : MC_FACE_LIGHT.d)
+      : Math.abs(z) > .5 ? (z > 0 ? MC_FACE_LIGHT.s : MC_FACE_LIGHT.n) : (x > 0 ? MC_FACE_LIGHT.e : MC_FACE_LIGHT.w);
+    col.setXYZ(i, k, k, k);
+  }
+  col.userData.painted = 1;
+  col.needsUpdate = true;
+  return geo;
+}
+let mcLights = 0;
+/** Maillage 3D d’un bloc (groupe avec la géométrie et, si besoin, sa lumière). */
+function mcMesh(id, noLight) {
+  const def = MCI.get(id);
+  const geo = mcGeometry(id);
+  if (!def || !geo) return null;
+  const g = new THREE.Group();
+  const mesh = new THREE.Mesh(geo, mcMat[def.pix || 0]);
+  mesh.castShadow = !!def.solid;
+  mesh.receiveShadow = true;
+  mesh.userData.mc = id;
+  g.add(mesh);
+  g.userData.mc = id;
+  g.userData.def = def;                       // propriétés du bloc (solidité, lumière…)
+  g.userData.box = geo.userData.box;
+  mesh.userData.pix = def.pix || 0;
+  if (!noLight && def.light > 0 && mcLights < 64) {   // émission de lumière (torche, lave, lanterne…)
+    mcLights++;
+    const l = new THREE.PointLight(0xffd9a0, def.light * 1.6, 3 + def.light * 1.6, 1.6);
+    l.position.set(0, .55, 0);
+    g.add(l);
+  }
+  return g;
+}
+
+/* ---------- icônes 2D (isométrique, comme l’inventaire créatif) ---------- */
+const mcIcons = new Map();
+const mcIconSize = 64;
+let mcIconRenderer = null, mcIconScene = null, mcIconCam = null;
+function mcIconInit() {
+  if (mcIconRenderer) return;
+  mcIconRenderer = new THREE.WebGLRenderer({ antialias: false, alpha: true, preserveDrawingBuffer: true });
+  mcIconRenderer.setPixelRatio(1);
+  mcIconRenderer.setSize(mcIconSize, mcIconSize, false);
+  mcIconRenderer.outputColorSpace = THREE.SRGBColorSpace;
+  mcIconScene = new THREE.Scene();
+  const w = 1.16;
+  mcIconCam = new THREE.OrthographicCamera(-w, w, w, -w, .01, 20);
+  mcIconCam.position.set(1.55, 1.65, 1.85);
+  mcIconCam.lookAt(0, .42, 0);
+}
+const mcIconMat = [0, 1, 2].map(pix =>
+  new THREE.MeshBasicMaterial({
+    map: mcTex, vertexColors: true, side: THREE.DoubleSide,
+    alphaTest: pix === 1 ? .5 : 0, transparent: pix === 2, depthWrite: pix !== 2
+  }));
+function mcIconRender(id) {
+  if (!mcAtlas.ready || mcIcons.has(id)) return mcIcons.get(id) || null;
+  const def = MCI.get(id);
+  const geo = def && mcGeometry(id);
+  if (!geo || !geo.attributes.position.count) return null;
+  mcIconInit();
+  const mesh = new THREE.Mesh(mcPaintVertexColors(geo), mcIconMat[def.pix || 0]);
+  mcIconScene.add(mesh);
+  mcIconRenderer.render(mcIconScene, mcIconCam);
+  const url = mcIconRenderer.domElement.toDataURL('image/png');
+  mcIconScene.remove(mesh);
+  mcIcons.set(id, url);
+  return url;
+}
+/** Balise d’icône : l’image tout de suite si elle est prête, sinon un emplacement
+ *  que la pompe remplira (seules les icônes réellement affichées sont dessinées). */
+function mcIconHTML(id) {
+  const url = mcIcons.get(id);
+  const name = ((MCI.get(id) || {}).name || id).replace(/"/g, '');
+  if (url) return `<img class="mci" alt="${name}" src="${url}">`;
+  return `<img class="mci" data-mc="${id}" alt="${name}">`;
+}
+/* pompe : dessine, par petits lots et sans saccader le jeu, les icônes des blocs
+ * réellement visibles à l’écran (inventaire créatif, barre rapide, bibliothèque),
+ * puis remplit les balises <img> correspondantes. */
+let mcIconFrame = 0;
+function mcIconPaint() {
+  if (!mcAtlas.ready) return;
+  if ((mcIconFrame++ & 7) !== 0) return;                 // une passe toutes les ~8 images
+  const pending = [];
+  for (const img of document.querySelectorAll('img.mci[data-mc]:not([data-ok])')) {
+    const box = img.getBoundingClientRect();
+    if (box.bottom < -80 || box.top > innerHeight + 80 || box.right < -80 || box.left > innerWidth + 80) continue;
+    const id = img.dataset.mc;
+    const url = mcIcons.get(id);
+    if (url) { img.src = url; img.dataset.ok = '1'; continue; }
+    if (!pending.includes(id)) pending.push(id);
+  }
+  if (!pending.length) return;
+  const t0 = performance.now();
+  let n = 0;
+  while (n < pending.length && performance.now() - t0 < 7) mcIconRender(pending[n++]);
+  for (let k = 0; k < n; k++) {
+    const url = mcIcons.get(pending[k]);
+    if (!url) continue;
+    for (const img of document.querySelectorAll(`img.mci[data-mc="${pending[k]}"]`)) { img.src = url; img.dataset.ok = '1'; }
+  }
+}
+/* à l’arrivée de l’atlas, toutes les icônes déjà demandées deviennent possibles */
+(function mcIconLoop() { requestAnimationFrame(mcIconLoop); mcIconPaint(); })();
+
+/* ---------- description d’un bloc pour l’inventaire ---------- */
+function mcCatLabel(b) { return (MC_CATNAME[b.cat] || b.cat).replace(/^\S+\s/, ''); }
+function mcTip(b) {
+  if (!b) return '';
+  const bits = [mcCatLabel(b)];
+  bits.push(b.solid ? '🧱 Solide' : '🚶 Traversable');
+  if (b.light) bits.push('💡 Lumière ' + b.light);
+  if (b.hard > 0) bits.push('⛏ ' + b.tool + ' · dureté ' + b.hard);
+  if (b.facing) bits.push('🧭 S’oriente vers toi');
+  if (b.pillar) bits.push('🪵 Axe selon la face');
+  return bits.join(' · ') + ' · minecraft:' + b.id;
+}
+/* nom d’objet → bloc Minecraft (ou null) */
+function mcItemBlock(k) { return mcDef(k); }
+/* clé d’objet pour une casse de bloc (créatif : on rend le bloc lui-même) */
+function mcItemKey(type) { const id = mcId(type); return id ? id : 'o:' + type; }
+
+/* ---------- orientation à la pose (comme dans Minecraft) ----------
+ * view : le regard du joueur (0 = nord, 1 = est, 2 = sud, 3 = ouest).
+ * La plupart des blocs orientables présentent leur avant au joueur ; les
+ * escaliers, pistons, répéteurs… s’orientent au contraire dans son axe de visée. */
+const mcPlaceRot = (def, n, yaw) => window.MCGeom.placeRot(def, n, yaw);
+
+/* ---------- objet en main : le bloc est visible au bout du bras ---------- */
+let mcHeldId = null, mcHeldGroup = null, mcHeldObj = null;
+/** Affiche le bloc sélectionné dans la main. Retourne true si un bloc 3D est affiché. */
+function mcHeldUpdate(item) {
+  const id = item ? mcId(item.k) : null;
+  const arm = me.c.held.parent;
+  if (!mcHeldGroup) {
+    mcHeldGroup = new THREE.Group();
+    mcHeldGroup.name = 'mcheld';
+    mcHeldGroup.position.copy(me.c.held.position);
+    arm.add(mcHeldGroup);
+  }
+  if (mcHeldId === id) return !!id;
+  mcHeldId = id;
+  if (mcHeldObj) { mcHeldGroup.remove(mcHeldObj); mcHeldObj = null; }
+  mcHeldGroup.visible = !!id;
+  if (!id) return false;
+  const g = mcMesh(id, 1);                        // sans lumière : juste le bloc
+  if (!g) return false;
+  const box = g.userData.box || [[-.5, 0, -.5], [.5, 1, .5]];
+  g.scale.setScalar(.3);
+  g.position.set(0, -(box[0][1] + box[1][1]) * .15, 0);
+  mcHeldGroup.rotation.set(-.15, .62, .2);
+  mcHeldGroup.add(g);
+  g.traverse(m => { m.castShadow = false; m.receiveShadow = false; });
+  mcHeldObj = g;
+  return true;
+}
+
+/* temps de casse : dureté officielle du bloc ajustée par l'outil tenu */
+function mcBreakNeed(type, item) {
+  const b = mcDef(type);
+  if (!b) return null;
+  const k = item && item.k;
+  const good = b.tool !== 'main' && k === b.tool;
+  const bad = b.tool !== 'main' && k && k !== b.tool && ['pioche', 'hache', 'pelle', 'houe'].includes(k);
+  return Math.max(.08, (b.hard <= 0 ? .12 : b.hard) * (good ? .45 : bad ? 1.7 : 1));
+}
+
+/* ---------- inventaire créatif : les catégories Minecraft + les objets du jeu ---------- */
+const MC_CREATIVE_CATS = (() => {
+  const cat = { 'Tout': 0 };
+  for (const [key, label] of MC_CATS) cat[label] = k => (MCI.get(k) || {}).cat === key;
+  cat['🧰 Objets du jeu'] = k => !MCI.has(k);
+  return cat;
+})();
+
+/* == MC-BLOCS:FIN =========================================================== */
+
+
+
 // ---------- bibliothèque d'objets
 const bx=(w,h,d,x,y,z,c)=>['b',w,h,d,x,y,z,c],cy=(w,h,x,y,z,c,e)=>['c',w,h,w,x,y,z,c,e],sp=(w,h,d,x,y,z,c,e)=>['s',w,h,d,x,y,z,c,e],pm=(w,h,d,x,y,z,c)=>['p',w,h,d,x,y,z,c];
 const wd='#8b5a2b',wl='#d9d4c7',gl='#9cf',gr='#2f7d32',stc='#888',L=(n,f)=>Array.from({length:n},(_,i)=>f(i));
@@ -380,109 +662,16 @@ lit:[bx(2,.35,1.1,0,.25,0,wd),bx(1.9,.25,1,0,.5,0,'#eee'),bx(.5,.12,.7,-.7,.7,0,
 coffre:[bx(1,.6,.7,0,.3,0,'#8b5a2b'),bx(1.05,.12,.75,0,.66,0,'#6b4521'),bx(.12,.2,.05,0,.5,.36,'#ddd')],
 panneau:[bx(.1,1,.1,0,.5,0,wd),bx(1.2,.7,.08,0,1.2,0,'#c9a46a')],
 commande_bloc:[bx(1,1,1,0,.5,0,'#c8762a'),bx(.5,.5,.05,0,.5,.52,'#222')]}}
-const BLK=`pierre_lisse n #8b8b8b
-granit n #a0675a #6b3f35 #c48a7a
-diorite n #c9c9c9 #8a8a8a #f2f2f2
-andésite n #7d7d80
-basalte n #3b3b42
-calcaire n #d9d2b8
-grès n #d8c486
-ardoise ti #4a5560
-obsidienne n #1a1030 #0a0618 #4b2a8a
-marbre_blanc ti #ecebf2 #b8b8c8 #ffffff
-marbre_noir ti #2a2a30 #0d0d10 #4a4a55
-gravier n #8d8683 #5c5755 #b5afab
-béton_gris co #9a9a9a
-tuf n #6f7566
-terre n #8a5a35
-herbe_bloc gs #4caf3a #8a5a35 #6a4020
-sable_bloc n #e6d28a
-sable_rouge n #c46a2b
-argile n #9aa4b5
-boue_bloc n #5b4330
-neige_bloc co #f4f8ff #d0dcee #ffffff
-glace_bloc gl #9fd8f5 #6bb6e0 #e8f8ff
-brique_rouge br #a5472d #d8c6b0 #b8553a
-brique_pierre br #8b8b8b #5c5c5c #9c9c9c
-brique_sable br #d8c486 #a89860 #e6d49a
-brique_noire br #33333a #16161a #44444c
-brique_bleue br #3a5fa8 #cfd8ec #4a70bc
-brique_verte br #3f8f4a #c8e0cc #4fa05a
-brique_dorée br #d9a830 #8a6410 #ecc050
-brique_nether br #6a1f24 #2a0a0c #7e2a30
-brique_blanche br #e8e4dc #a8a498 #f6f2ea
-brique_jaune br #e0c040 #a08a20 #f0d460
-planche_chêne pl #b8894a #7a5226 #d0a566
-planche_sapin pl #7a5a35 #4a3320 #97734a
-planche_bouleau pl #e0cf9a #a89868 #f2e8c0
-planche_acajou pl #8a3a22 #4f1e10 #a85238
-planche_ébène pl #3a2a24 #1a100c #54403a
-planche_cerisier pl #c96a58 #8a3a30 #e08a78
-tronc_chêne lg #9c7340 #5a3a1e #c9a46a
-tronc_bouleau lg #e8e2cc #8a8470 #3a3a3e
-tronc_sapin lg #6a4a2a #3a2614 #8a6a44
-bambou bm #7cb342 #4a7a22 #a8d870
-parquet st #c08a50 #8a5a2a #dba66a
-caisse_bois cr #b8894a #5a3a1e #d9a95e
-béton_rouge co #b53a30
-béton_bleu co #3a64b8
-béton_vert co #3a9a48
-béton_jaune co #e8c52e
-béton_orange co #e87a22
-béton_violet co #8a3ab8
-béton_rose co #ee8ab8
-béton_noir co #222226
-béton_blanc co #ececec
-béton_cyan co #2aa8c0
-laine_blanche wo #eeeeee
-laine_rouge wo #cc3333
-laine_bleue wo #3a5fc8
-laine_verte wo #3aa04a
-laine_jaune wo #f0d030
-laine_noire wo #2a2a2e
-laine_rose wo #f08ac0
-laine_cyan wo #2ab0c8
-laine_orange wo #f08a20
-laine_violette wo #8a3ac0
-minerai_charbon or #8b8b8b #6b6b6b #1c1c1c
-minerai_fer or #8b8b8b #6b6b6b #d8b49a
-minerai_or or #8b8b8b #6b6b6b #ffd23a
-minerai_diamant or #8b8b8b #6b6b6b #4de8e0
-minerai_émeraude or #8b8b8b #6b6b6b #2ecc5a
-minerai_rubis or #8b8b8b #6b6b6b #e0204a
-minerai_lapis or #8b8b8b #6b6b6b #2a4ad8
-minerai_cuivre or #8b8b8b #6b6b6b #e8884a
-bloc_fer ti #d8dde2 #9aa3ad #f4f7fa
-bloc_or ti #f6d03a #b58a10 #fff0a0
-bloc_diamant ti #5ee8e0 #2aa0a0 #c8fffc
-bloc_cuivre ti #d8803f #8a4a1c #f0a870
-bloc_émeraude ti #3ad870 #1a8a40 #a0ffc0
-tôle sc #9aa5b0 #6a7580 #c8d0d8
-grille_métal ck #555a60 #8a9097
-circuit ci #1a5a2a #0e3018 #e8c840
-néon_bleu ci #102a60 #081838 #40c8ff
-néon_rose ci #400a30 #200518 #ff50c0
-verre_bloc gl #d8f0f8 #a8d8e8 #ffffff
-verre_teinté gl #4a6a9a #2a4670 #a0c0f0
-lave_bloc wv #d84a10 #a02a08 #ffe060
-eau_bloc wv #2a60d0 #2a4aa0 #8ac8ff
-feuilles_bloc lf #2c7a34 #1a5020 #58b858
-feuilles_automne lf #c86a1a #8a3a10 #e8a030
-foin hy #d8b83a #a08820 #f0d870
-citrouille pu #e8821a #a8540a #f8a840
-pastèque_bloc pu #3a9a3a #1a5a1a #7ac870
-miel_bloc hx #f0a820 #c07a10 #ffd860
-slime_bloc hx #6adb4a #3a9a2a #b0ff90
-bibliothèque sh #b8894a #7a5226 #cc3333
-carrelage_blanc ti #f2f2f6 #b0b0c0 #ffffff
-damier ck #f0f0f0 #222226
-pois_rouges dt #f4f4f4 #f4f4f4 #d02020
-rayures_bleues st #f0f0f0 #3a64b8
-tnt_déco bd #c8302a #6a1010 #f0e8d0
-pavé br #7a7a82 #4a4a52 #8c8c94`.split('\n').map(l=>l.trim().split(' ')),BSET=new Set(['bloc_planche','bloc_bois','coffre',...BLK.map(b=>b[0])]);
-BLK.forEach(b=>LIB.Blocs[b[0]]=[bx(1,1,1,0,.5,0,b[2])]);
-const LF=Object.assign({},...Object.values(LIB));LF.jukebox=[bx(1,1.2,.8,0,.6,0,'#5a3a22'),bx(.8,.1,.7,0,1.25,0,'#222'),bx(.5,.5,.05,0,.7,.41,'#c33'),bx(.7,.08,.05,0,1,.41,'#fc3')];
-function mkObj(t){const g=new THREE.Group();for(const[sh,w,h,d,x,y,z,c,em]of LF[t]||LF.caisse){
+// liste des blocs : ceux de Minecraft (mc/blocks.js) + les alias de l'ancienne version
+const BLK=MCB.map(b=>[b.id,b.name]);
+const BSET=new Set([...MCI.keys(),...Object.keys(LEGACY),'bloc_planche','bloc_bois','coffre']);
+for(const b of MCB)LIB.Blocs[b.id]=[['mc',b.id]];
+const LF=Object.assign({},...Object.values(LIB));
+// les blocs de l'ancienne version deviennent des alias (cartes sauvegardées lisibles)
+for(const[k,v]of Object.entries(LEGACY))LF[k]=[['mc',v]];
+LF.jukebox=[bx(1,1.2,.8,0,.6,0,'#5a3a22'),bx(.8,.1,.7,0,1.25,0,'#222'),bx(.5,.5,.05,0,.7,.41,'#c33'),bx(.7,.08,.05,0,1,.41,'#fc3')];
+function mkObj(t){const mc=LF[t]&&LF[t][0]&&LF[t][0][0]==='mc'?LF[t][0][1]:null;if(mc){const g=mcMesh(mc);if(g){g.rotation.order='ZYX';return g}}
+ const g=new THREE.Group();for(const[sh,w,h,d,x,y,z,c,em]of LF[t]||LF.caisse){
  const geo=sh==='b'?new THREE.BoxGeometry(w,h,d):sh==='c'?new THREE.CylinderGeometry(w/2,w/2,h,12):sh==='k'?new THREE.ConeGeometry(w/2,h,12):sh==='p'?new THREE.ConeGeometry(w*.7071,h,4).rotateY(PI/4):new THREE.SphereGeometry(.5,12,8);
  const m=new THREE.Mesh(geo,new THREE.MeshToonMaterial({color:c,gradientMap:toonG,emissive:em?c:0,transparent:c===gl,opacity:c===gl?.55:1}));m.userData.c=c;m.userData.sk=(SK[t]||[])[g.children.length];
  if(sh==='s')m.scale.set(w,h,d);if(sh==='p')m.scale.z=d/w;m.position.set(x,y,z);m.castShadow=m.receiveShadow=true;g.add(m)}return g}
@@ -528,34 +717,8 @@ lit:[['bois_sombre',2],['drap',1],['oreiller',1],['couverture',1]],
 panneau:[['bois_sombre',1],['panneau_bois',1]],
 commande_bloc:[['cmd_bloc',1],['cmd_ecran',1]],
 jukebox:[['juke_corps',1],['juke_dessus',1],['juke_grille',1],['juke_chrome',1]]};
-// ---------- v8 : textures des 100 blocs (pixel art 16x16, générées par code)
-const sh=(c,l)=>'#'+[16,8,0].map(s=>{let v=parseInt(c.slice(1),16)>>s&255;v=l>0?v+(255-v)*l*2:v*(1+l*2);return(v|0).toString(16).padStart(2,'0')}).join('');
-const BC4=['#cc3333','#3388cc','#44aa44','#ddbb33'];
-const G={n:(P,R,a,b,c,x,y)=>{const r=R();P(x,y,r<.22?b:r<.34?c:a)},co:(P,R,a,b,c,x,y)=>{const r=R();P(x,y,r<.08?c:r<.16?b:a)},wo:(P,R,a,b,c,x,y)=>{const r=R();P(x,y,r<.4?a:r<.7?b:c)},lf:(P,R,a,b,c,x,y)=>{const r=R();P(x,y,r<.4?b:r<.75?a:c)},
-br:(P,R,a,b,c,x,y)=>P(x,y,(y%4==3||x%8==((y>>2&1)?3:7))?b:R()<.14?c:a),
-pl:(P,R,a,b,c,x,y)=>P(x,y,y%4==3?b:y%4==0?c:((x*7+y*13)%23==0?b:a)),
-lg:(P,R,a,b,c,x,y)=>{const d=Math.max(Math.abs(x-7.5),Math.abs(y-7.5))|0;P(x,y,d>6?c:d%2?a:b)},
-ti:(P,R,a,b,c,x,y)=>P(x,y,(x%8==7||y%8==7)?b:(x%8==0||y%8==0)?c:a),
-ck:(P,R,a,b,c,x,y)=>P(x,y,((x>>2)+(y>>2))%2?a:b),
-gl:(P,R,a,b,c,x,y)=>P(x,y,(x<1||y<1||x>14||y>14)?b:((x+y==10||x+y==11)&&x>2&&y>2&&x<9)?c:a),
-wv:(P,R,a,b,c,x,y)=>{const v=Math.sin(x*.6+y*.9)+Math.sin(y*.5-x*.4)*.8;P(x,y,v>.9?c:v>-.3?a:b)},
-hy:(P,R,a,b,c,x,y)=>P(x,y,y%4==3?b:R()<.3?c:a),pu:(P,R,a,b,c,x,y)=>P(x,y,x%5==0?b:x%5==1?c:a),
-hx:(P,R,a,b,c,x,y)=>{const u=(x+((y>>2)&1)*2)%4;P(x,y,(u==0||y%4==3)?b:(u==1&&y%4==1)?c:a)},
-sh:(P,R,a,b,c,x,y)=>P(x,y,(y<3||y>12||y==7||y==8)?(y%2?b:a):x%4==3?b:BC4[(x>>1)%4]),
-ci:(P,R,a,b,c,x,y)=>P(x,y,(x%6==3&&y%5==2)?b:((y%5==2&&x%7!=0)||(x%6==3&&y>2))?c:a),
-sc:(P,R,a,b,c,x,y)=>P(x,y,((x+((y>>2)&1)*4)%8==0||y%4==3)?b:y%4==0?c:a),
-dt:(P,R,a,b,c,x,y)=>P(x,y,((x%4==1&&y%4==1)||(x%4==3&&y%4==3))?c:a),
-st:(P,R,a,b,c,x,y)=>P(x,y,((x+y)>>2)%2?a:b),
-gs:(P,R,a,b,c,x,y)=>P(x,y,y<3+((x*7)%3)?(R()<.2?sh(a,-.1):a):(R()<.25?c:b)),
-bm:(P,R,a,b,c,x,y)=>P(x,y,x%4==3?b:y%8==0?b:x%4==0?c:a),
-cr:(P,R,a,b,c,x,y)=>P(x,y,(x<2||y<2||x>13||y>13)?b:(Math.abs(x-y)<2||Math.abs(x+y-15)<2)?c:a),
-bd:(P,R,a,b,c,x,y)=>P(x,y,(y<2||y>13)?b:(y>4&&y<11)?c:a)};
-const BCV={},BMAP=Object.fromEntries(BLK.map(b=>[b[0],b]));
-function bcv(k){if(BCV[k])return BCV[k];const[,pt,a,b0,c0]=BMAP[k],soft=pt=='wo'||pt=='co',b=b0||sh(a,soft?-.07:-.15),c=c0||sh(a,soft?.07:.15),cv=document.createElement('canvas');cv.width=cv.height=16;const x=cv.getContext('2d');let h=0;for(const ch of k)h=(h*31+ch.charCodeAt(0))|0;const R=rng(Math.abs(h)+1),P=(X,Y,col)=>{x.fillStyle=col;x.fillRect(X,Y,1,1)};
- for(let y=0;y<16;y++)for(let X=0;X<16;X++)(pt=='or'?G.n:G[pt])(P,R,a,b,pt=='or'?'#6b6b6b':c,X,y);
- if(pt=='or')for(let i=0;i<7;i++){const X=1+R()*13|0,Y=1+R()*13|0;P(X,Y,c);P(X+1,Y,c);P(X,Y+1,c)}
- return BCV[k]=cv}
-BLK.forEach(([k])=>{Object.defineProperty(PRE,'b_'+k,{value:(x,w)=>{x.imageSmoothingEnabled=false;x.drawImage(bcv(k),0,0,w,w)}});SK[k]=[['b_'+k,1]]});
+// (v8) Les 100 blocs procéduraux ont été remplacés par les vrais blocs Minecraft :
+// textures officielles dans textures/minecraft/, données dans mc/blocks.js.
 
 // atlas du terrain : 8 matières (sol, herbe, terre, sable, pierre, boue, neige, béton)
 const terrAtlas=(()=>{const c=document.createElement('canvas');c.width=512;c.height=256;const x=c.getContext('2d'),R=rng(7);
@@ -570,20 +733,29 @@ const terrAtlas=(()=>{const c=document.createElement('canvas');c.width=512;c.hei
  (x,w)=>{rr(x,'#fff',0,0,w,w);rr(x,'#8c8f96',0,0,w,2);rr(x,'#8c8f96',0,0,2,w);rr(x,'#8c8f96',63,0,2,w);rr(x,'#8c8f96',0,63,w,2);for(let i=0;i<240;i++){const v=170+R()*60|0;x.fillStyle=`rgb(${v},${v},${v})`;x.fillRect(R()*w,R()*w,2,2)}for(let i=0;i<4;i++){x.fillStyle='rgba(90,90,100,.2)';x.beginPath();x.ellipse(R()*w,R()*w,12,7,R(),0,7);x.fill()}}];
  P.forEach((f,i)=>{x.save();x.translate((i%4)*128,(i>>2)*128);x.beginPath();x.rect(0,0,128,128);x.clip();f(x,128);x.restore()});
  const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.generateMipmaps=false;t.minFilter=t.magFilter=THREE.LinearFilter;return t})();
+// Le sol utilise les textures Minecraft (textures/minecraft/terrain-atlas.png) :
+// chaque matière est une « texture de détail » (moyenne = 1) multipliée par la
+// couleur de la matière, exactement comme le faisait la texture procédurale.
+new THREE.TextureLoader().load('textures/minecraft/terrain-atlas.png',t=>{t.colorSpace=THREE.SRGBColorSpace;t.generateMipmaps=false;t.minFilter=t.magFilter=THREE.NearestFilter;t.needsUpdate=true;terrAtlas.image=t.image;terrAtlas.needsUpdate=true},null,()=>{});
 function terrPatch(m){m.onBeforeCompile=sh=>{sh.uniforms.pat={value:terrAtlas};
  sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nattribute float cls;varying float vCls;varying vec2 vWp;').replace('#include <begin_vertex>','#include <begin_vertex>\nvCls=cls;vWp=position.xz;');
  sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nuniform sampler2D pat;varying float vCls;varying vec2 vWp;').replace('#include <color_fragment>','#include <color_fragment>\n{float ci=floor(vCls+.5);vec2 tu=fract(vWp/3.);vec2 cell=vec2(mod(ci,4.),floor(ci/4.));vec3 pt=texture2D(pat,(cell+tu*.94+.03)/vec2(4.,2.)).rgb;float fa=1.-smoothstep(35.,100.,length(vViewPosition));diffuseColor.rgb*=mix(vec3(1.),pt,fa);}')}}
 terrPatch(terr.material);
 const DEFT={bloc_planche:'p:planche',bloc_bois:'p:bois'};let TX={};const tc={};
 function getTex(id){return tc[id]||(tc[id]=new Promise(r=>{if(id.startsWith('c:')){const c=document.createElement('canvas');c.width=c.height=4;const x=c.getContext('2d');x.fillStyle=id.slice(2);x.fillRect(0,0,4,4);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;r(t)}else if(id.startsWith('p:')){const c=document.createElement('canvas');c.width=c.height=128;PRE[id.slice(2)](c.getContext('2d'),128);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;r(t)}else if(TX[id])new THREE.TextureLoader().load(TX[id],t=>{t.colorSpace=THREE.SRGBColorSpace;r(t)});else{delete tc[id];r(null)}}))}
-function setTex(g,o){if(o.type==='model')return;if(!o.tex&&DEFT[o.type])o={...o,tex:DEFT[o.type]};const[rep,rot,ox,oy]=o.tx||[1,0,0,0];if(!o.tex){g.children.filter(m=>m.name!=='txt').forEach(m=>{const sk=m.userData.sk;if(sk){getTex('p:'+sk[0]).then(t=>{if(!t)return;const k=t.clone();if(sk[0].startsWith('b_'))k.magFilter=THREE.NearestFilter;k.needsUpdate=true;k.wrapS=k.wrapT=THREE.RepeatWrapping;k.repeat.set(rep*sk[1],rep*sk[1]);k.center.set(.5,.5);k.rotation=rot*PI/180;k.offset.set(ox,oy);m.material.map=k;m.material.color.set('#fff');m.material.needsUpdate=true})}else{m.material.map=null;m.material.color.set(m.userData.c);m.material.needsUpdate=true}});return}
+function setTex(g,o){if(o.type==='model'||g.userData.mc)return;if(!o.tex&&DEFT[o.type])o={...o,tex:DEFT[o.type]};const[rep,rot,ox,oy]=o.tx||[1,0,0,0];if(!o.tex){g.children.filter(m=>m.name!=='txt').forEach(m=>{const sk=m.userData.sk;if(sk){getTex('p:'+sk[0]).then(t=>{if(!t)return;const k=t.clone();if(sk[0].startsWith('b_'))k.magFilter=THREE.NearestFilter;k.needsUpdate=true;k.wrapS=k.wrapT=THREE.RepeatWrapping;k.repeat.set(rep*sk[1],rep*sk[1]);k.center.set(.5,.5);k.rotation=rot*PI/180;k.offset.set(ox,oy);m.material.map=k;m.material.color.set('#fff');m.material.needsUpdate=true})}else{m.material.map=null;m.material.color.set(m.userData.c);m.material.needsUpdate=true}});return}
  getTex(o.tex).then(t=>{if(!t)return;g.children.filter(m=>m.name!=='txt').forEach(m=>{const k=t.clone();k.needsUpdate=true;k.wrapS=k.wrapT=THREE.RepeatWrapping;k.repeat.set(rep,rep);k.center.set(.5,.5);k.rotation=rot*PI/180;k.offset.set(ox,oy);m.material.map=k;m.material.color.set('#fff');m.material.needsUpdate=true})})}
 // ---------- objets du monde
 // Les objets au sol disparaissent au bout de 2 minutes (clearlags).
 const DROP_TTL=2*60*1000,dropExpireAt=d=>+d?.expireAt||((+d?.born||0)+DROP_TTL);
 const og=new THREE.Group();sc.add(og);let OB={},selId=null;const DROPS={};const bh=new THREE.BoxHelper(new THREE.Object3D(),0xffff00);bh.visible=false;sc.add(bh);
 function addObj(o){if(!o||!o.id||(o.type!=='model'&&!LF[o.type]))return;rmObj(o.id);const g=o.type==='model'?new THREE.Group():mkObj(o.type);g.userData.id=o.id;og.add(g);OB[o.id]={o,g,bx:new THREE.Box3(),colliders:[]};applyObj(o.id);if(o.type==='model')loadModel(OB[o.id])}
-function setVis(b){const o=b.o;b.g.visible=o.vis!==0||build;b.g.traverse(m=>{if(!m.isMesh||m.name==='txt')return;const mats=Array.isArray(m.material)?m.material:[m.material];mats.forEach(mt=>{if(!mt)return;mt.transparent=o.vis===0||m.userData.c===gl;mt.opacity=o.vis===0?.25:(m.userData.c===gl?.55:1);mt.needsUpdate=true})})}
+function setVis(b){const o=b.o;b.g.visible=o.vis!==0||build;b.g.traverse(m=>{if(!m.isMesh||m.name==='txt')return;
+ if(m.userData.mc){ // blocs Minecraft : matière personnelle (verre, eau…) ou clone pour le mode build
+  if(o.vis===0){if(!m.userData.ghost){m.userData.ghost=1;m.material=m.material.clone()}m.material.transparent=true;m.material.opacity=.25;m.material.depthWrite=false}
+  else if(m.userData.ghost){m.userData.ghost=0;m.material=mcMat[m.userData.pix||0]}
+  m.material.needsUpdate=true;return}
+ const mats=Array.isArray(m.material)?m.material:[m.material];mats.forEach(mt=>{if(!mt)return;mt.transparent=o.vis===0||m.userData.c===gl;mt.opacity=o.vis===0?.25:(m.userData.c===gl?.55:1);mt.needsUpdate=true})})}
 function applyObj(id,fast){const b=OB[id];if(!b)return;const{o,g}=b;g.position.set(...o.p);g.rotation.set(...o.r);g.scale.set(...o.s);g.updateMatrixWorld(true);b.bx=new THREE.Box3().setFromObject(g);b.colliders=[];if(o.type==='model')g.traverse(m=>{if(m.isMesh&&m.geometry?.attributes?.position){if(!m.geometry.boundingBox)m.geometry.computeBoundingBox();b.colliders.push({mesh:m,box:m.geometry.boundingBox.clone().applyMatrix4(m.matrixWorld)})}});if(!fast){setVis(b);setTex(g,o);signTxt(b)}}
 function rmObj(id){const b=OB[id];if(b){og.remove(b.g);delete OB[id];if(selId!=null&&String(selId)===String(id))selId=null;if(typeof jk!=='undefined'&&jk[id])jkStop(id,0)}}
 // ---------- réseau
@@ -678,11 +850,12 @@ Object.assign(EMO,{bloc_planche:PX(['pppppppp','qqqqqqqq','pppqpppp','pppppppq',
 lit:PX(['........','.bb.....','.bbllllll','.bbllllll','pppppppp','p......p','p......p','........'],PM),coffre:PX(['........','cccccccc','cwwwwwwc','cccececc','cccccccc','cwwwwwwc','cccccccc','........'],PM),
 panneau:PX(['........','aaaaaaaa','aaaaaaaa','aaaaaaaa','...ss...','...ss...','...ss...','...ss...'],PM),commande_bloc:PX(['oooooooo','okkkkkko','okoooook','okokkook','okoooook','okkkkkko','oooooooo','oooooooo'],PM)});
 const nm=t=>(t[0].toUpperCase()+t.slice(1)).replace(/_/g,' ');
-BLK.forEach(([k])=>EMO[k]=`<img src="${bcv(k).toDataURL()}" style="width:32px;image-rendering:pixelated;vertical-align:middle">`);
+for(const b of MCB)EMO[b.id]=mcIconHTML(b.id);   // vignettes des blocs Minecraft
 const FOOD=[['pomme','Pomme','🍎'],['pain','Pain','🍞'],['steak','Steak','🥩'],['carotte','Carotte','🥕'],['pastèque','Pastèque','🍉'],['gâteau','Gâteau','🍰'],['cookie','Cookie','🍪'],['pizza','Pizza','🍕'],['burger','Burger','🍔'],['poisson','Poisson','🐟'],['lait','Lait','🥛'],['miel','Miel','🍯'],['oeuf','Œuf','🥚'],['raisin','Raisin','🍇']];
 const MAT=[['bois','Bois','🪵'],['planche','Planche','🟫'],['pierre','Pierre','🪨'],['fer','Fer','⛓️'],['verre','Verre','🪟'],['tissu','Tissu','🧶'],['baton','Bâton','🥢'],['marteau','Marteau','🔨'],['torche','Torche','🔦'],['sac','Sac à dos','🎒']];
 const IT={};FOOD.forEach(([k,n,e])=>IT[k]=[n,e,64,'#e94','Se mange (clic droit).',1]);MAT.forEach(([k,n,e])=>IT[k]=[n,e,k==='marteau'||k==='sac'?1:64,'#a98','Matériau / outil.']);
-Object.keys(LF).forEach(t=>IT['o:'+t]=[nm(t),EMO[t]||'📦',64,LF[t][0][7]||'#999','Objet à poser (clic droit).']);
+for(const b of MCB)if(!IT[b.id])IT[b.id]=[b.name,mcIconHTML(b.id),64,b.col,mcTip(b)];
+Object.keys(LF).forEach(t=>{if(MCI.has(t))return;IT['o:'+t]=[nm(t),EMO[t]||'📦',64,LF[t][0][7]||'#999','Objet à poser (clic droit).']});
 if(IT['o:coffre'])IT['o:coffre'][4]='Objet à poser (clic droit) : 27 emplacements, contenu sauvegardé. Le contenu tombe au sol si le coffre est cassé.';
 Object.assign(IT,{
 hache:['Hache',PX(['..mmm...','.mmmm...','.mmms...','..mms...','...s....','..s.....','.s......','s.......'],PM),1,'#d0d8e0','Casse les arbres 3× plus vite.'],
@@ -735,7 +908,10 @@ for(const k in EMO)if(!/^<img/.test(EMO[k]))EMO[k]=ICO(k,LF[k]?.[0]?.[7]||'#999'
 for(const k in IT)if(!/^<img/.test(IT[k][1]))IT[k][1]=ICO(k,IT[k][3]||'#999');
 const FI=[['longue_vue', 'Longue-vue', '🔭', '#c9a24a', 'Maintiens le clic droit : zoom ×4.', 't'], ['boussole', 'Boussole', '🧭', '#c0392b', 'Clic droit : direction (N/S/E/O).', 't'], ['montre', 'Montre', '⌚', '#c5ccd3', 'Clic droit : heure du monde.', 't'], ['carte', 'Carte', '🗺️', '#e8d8a8', 'Clic droit : tes coordonnées.', 'm'], ['lampe_torche', 'Lampe torche', '🔦', '#f6e27a', 'Clic droit : allume/éteint le faisceau.', 't'], ['lanterne', 'Lanterne', '🏮', '#ff9a1f', 'Tenue en main, éclaire autour de toi.', 't'], ['grappin', 'Grappin', '🪝', '#9aa3ad', 'Clic droit : te tire vers le point visé (45 m).', 't'], ['perle_téléport', 'Perle de téléportation', '🔮', '#7a3fd0', 'Clic droit : te téléporte au point visé.', 'c'], ['jetpack', 'Jetpack', '🚀', '#d33', 'Clic droit : propulsion vers le haut.', 'c'], ['ressort', 'Ressort', '🪀', '#e8a12e', 'Clic droit : grand saut.', 't'], ['parachute', 'Parachute', '🪂', '#e8532e', 'Clic droit : chute ralentie 8 s.', 'm'], ['ballon', 'Ballon', '🎈', '#e84a5f', 'Clic droit : tu flottes 5 s.', 'm'], ['potion_soin', 'Potion de soin', '🧪', '#e33', 'Restaure toute la vie.', 'p'], ['potion_vitesse', 'Potion de vitesse', '💨', '#4af', 'Vitesse ×1,8 pendant 25 s.', 'p'], ['potion_saut', 'Potion de saut', '🦘', '#6c6', 'Super saut pendant 25 s.', 'p'], ['potion_gravité', 'Potion de gravité lunaire', '🌙', '#99c', 'Gravité faible pendant 30 s.', 'p'], ['pomme_dorée', 'Pomme dorée', '🍏', '#ffd23a', 'Redonne 5 cœurs.', 'p'], ['cristal_aube', 'Cristal d’aube', '🌅', '#ff9a5a', 'Clic droit : aube pour tout le monde.', 'c'], ['cristal_jour', 'Cristal de jour', '☀️', '#ffe066', 'Clic droit : plein jour pour tout le monde.', 'c'], ['cristal_nuit', 'Cristal de nuit', '🌑', '#334', 'Clic droit : minuit pour tout le monde.', 'c'], ['baguette_éclair', 'Baguette d’éclair', '🌩️', '#8ac', 'Clic droit : foudroie le point visé.', 'c'], ['canne_à_pêche', 'Canne à pêche', '🎣', '#6b4521', 'Clic droit : tente de pêcher un poisson.', 'm'], ['appareil_photo', 'Appareil photo', '📷', '#555', 'Clic droit : enregistre une capture PNG.', 't'], ['mégaphone', 'Mégaphone', '📢', '#e88', 'Clic droit : crie dans le chat.', 't'], ['sifflet', 'Sifflet', '📯', '#ddd', 'Clic droit : siffle.', 't'], ['cloche', 'Cloche', '🔔', '#e8c030', 'Clic droit : fait sonner la cloche.', 't'], ['tambour', 'Tambour', '🥁', '#c44', 'Clic droit : bam !', 'm'], ['harmonica', 'Harmonica', '🎼', '#bbb', 'Clic droit : joue une note.', 't'], ['loupe', 'Loupe', '🔍', '#9cf', 'Clic droit : nom et distance de l’objet visé.', 't'], ['règle', 'Règle', '📏', '#e8c070', 'Clic droit 2 fois : mesure une distance.', 'm'], ['dynamite', 'Dynamite', '🧨', '#d22', 'Clic droit : creuse un cratère.', 'c'], ['pelle_magique', 'Pelle magique', '⛏️', '#a8f', 'Clic droit : fait monter le terrain.', 'c'], ['niveleuse', 'Niveleuse', '🚜', '#e8a12e', 'Clic droit : aplatit le terrain visé.', 'c'], ['pousse_arbre', 'Pousse d’arbre', '🌱', '#4a4', 'Clic droit : plante un arbre.', 'm'], ['balise', 'Balise', '📍', '#e33', 'Clic droit : définit ton point de réapparition.', 't'], ['portail_retour', 'Portail de retour', '🌀', '#58f', 'Clic droit : retour à ta balise (ou au centre).', 'c'], ['radar', 'Radar', '📡', '#8c8', 'Clic droit : joueurs proches.', 't'], ['altimètre', 'Altimètre', '⛰️', '#a98', 'Clic droit : altitude actuelle.', 't'], ['minuteur', 'Minuteur', '⏲️', '#ccc', 'Clic droit : sonnerie dans 10 s.', 't'], ['dé', 'Dé', '🎲', '#fff', 'Clic droit : lance le dé (1 à 6).', 'm']];
 FI.forEach(([k,n,e,c,d])=>IT[k]=[n,e,/^(potion|pomme|dynamite|perle|pousse)/.test(k)?16:1,c,d]);
-let ccat='Tout';const FSET=new Set(FI.map(f=>f[0])),CREATIVE_FOOD=new Set([...FOOD.map(([k])=>k),'pomme_dorée']),CREATIVE_ALLOWED=new Set(['o:jukebox','o:coffre','cd','o:bloc_planche',...CREATIVE_FOOD]),CREATIVE_CATS={'Tout':0,'💿 Musique':k=>k==='cd'||k==='o:jukebox','🍎 Aliments':k=>CREATIVE_FOOD.has(k),'🧱 Bloc planche':k=>k==='o:bloc_planche'},CATS={'Tout':0,'🧱 Blocs':k=>BSET.has(k),'🪑 Objets':k=>k[1]===':'&&!BSET.has(k),'🍎 Nourriture':k=>FOOD.some(f=>f[0]===k),'🧰 Fonctionnels':k=>FSET.has(k),'⚒ Outils':k=>k[1]!==':'&&!FSET.has(k)&&!FOOD.some(f=>f[0]===k)};
+let ccat='Tout';const FSET=new Set(FI.map(f=>f[0])),CREATIVE_FOOD=new Set([...FOOD.map(([k])=>k),'pomme_dorée']),
+// inventaire créatif : toutes les catégories de blocs Minecraft + les objets du jeu
+CREATIVE_ALLOWED=new Set(['o:jukebox','o:coffre','cd','o:bloc_planche',...CREATIVE_FOOD,...MCI.keys()]),CREATIVE_CATS=MC_CREATIVE_CATS,
+CATS={'Tout':0,'🧱 Blocs':k=>MCI.has(k)||BSET.has(k),'🪑 Objets':k=>k[1]===':'&&!BSET.has(k),'🍎 Nourriture':k=>FOOD.some(f=>f[0]===k),'🧰 Fonctionnels':k=>FSET.has(k),'⚒ Outils':k=>k[1]!==':'&&!FSET.has(k)&&!FOOD.some(f=>f[0]===k)};
 function ctabs(){const cats=gm==='creative'?CREATIVE_CATS:CATS;if(!cats[ccat])ccat='Tout';$('#ct').innerHTML=Object.keys(cats).map(c=>`<button data-c="${c}" class="${c===ccat?'on':''}" style="padding:4px 8px;margin:1px;font-size:12px">${c} <small>${Object.keys(IT).filter(k=>(gm!=='creative'||CREATIVE_ALLOWED.has(k))&&(!cats[c]||cats[c](k))).length}</small></button>`).join('')}
 
 if(!localStorage.gmv){localStorage.gmv=1;delete localStorage.gm}
@@ -744,7 +920,12 @@ let fly=0,lastSp=0,gm=localStorage.gm||'survival',fp=0,tOff=0,lme=null,mx=innerW
 const zMax=()=>cl(+cfg.zoom||4,1.5,12),zLvl=()=>cl(+cfg.zlvl||zMax(),1.2,zMax());
 let zCur=1;const _zv=new THREE.Vector3(),_za=new THREE.Vector3(),_zd=new THREE.Vector3(),zhud=$('#zhud'),ztg=$('#ztg');
 function zoomTargetPt(){const c=document.pointerLockElement?{clientX:innerWidth/2,clientY:innerHeight/2}:{clientX:mx,clientY:my};return pick(c).p||_zv.copy(rc.ray.origin).addScaledVector(rc.ray.direction,60)}
-let inv;try{inv=JSON.parse(localStorage.inv||'null')}catch(e){inv=null}if(!Array.isArray(inv)||inv.length!==36){inv=Array(36).fill(null);inv[0]={k:'marteau',n:1};inv[1]={k:'torche',n:8};inv[2]={k:'pomme',n:16};inv[3]={k:'planche',n:64};inv[4]={k:'pierre',n:64}}
+let inv;try{inv=JSON.parse(localStorage.inv||'null')}catch(e){inv=null}if(!Array.isArray(inv)||inv.length!==36){inv=Array(36).fill(null);inv[0]={k:'marteau',n:1};inv[1]={k:'torche',n:8};inv[2]={k:'pomme',n:16};inv[3]={k:'oak_planks',n:64};inv[4]={k:'stone',n:64}}
+/* Ancienne version : les planches et la pierre du jeu étaient des objets
+ * « planche » / « pierre ». Depuis les blocs Minecraft, les mêmes objets
+ * deviennent des blocs (inventaire conservé, donc barre rapide migrée). */
+const MC_INV_ALIAS={planche:'oak_planks',bois:'oak_log',pierre:'stone',brique:'bricks',verre:'glass',sable:'sand',terre:'dirt',feuille:'oak_leaves',laine:'white_wool',beton:'gray_concrete','béton':'gray_concrete',glace:'ice',neige:'snow_block',obsidienne:'obsidian',or:'gold_block',fer:'iron_block',diamant:'diamond_block','émeraude':'emerald_block',charbon:'coal_block',cuivre:'copper_block'};
+for(const s of inv)if(s&&MC_INV_ALIAS[s.k])s.k=MC_INV_ALIAS[s.k];
 const eq=[null,null,null,null];let paint='p:brique',pcol='#c84a3c',cmdOpen=0,cmdId=null,chestId=null,chJ='',lockLost=0,ign=0;const ticks=[];
 let cur=null,sel=0,invOpen=false,chatOpen=false;
 function itemDef(item){const k=typeof item==='string'?item:item?.k;if(!k)return['Objet inconnu','📦',1,'#999','Objet.'];if(!IT[k])IT[k]=[item?.model?.name||item?.name|| (k.startsWith('model:')?'Modèle 3D':nm(k)), '📦',item?.model?1:64,'#b7a2d8','Objet récupéré dans le monde.'];if(item?.model)IT[k][2]=1;return IT[k]}
@@ -767,7 +948,7 @@ function sclick(a,i,rt,sh){const s=a[i];if(sh&&!cur&&(a===inv||a===chestArr())){
  if(!cur){if(s){if(rt&&s.n>1){const h=s.n>>1;cur=cloneItem(s,h);s.n-=h}else{cur=s;a[i]=null}}}
  else if(!s){if(rt&&cur.n>1){a[i]=cloneItem(cur,1);cur.n--}else{a[i]=cur;cur=null}}
  else if(s.k===cur.k&&!s.model&&!cur.model&&!s.cid&&!cur.cid){const t=Math.min(itemDef(s)[2]-s.n,rt?1:cur.n);s.n+=t;cur.n-=t;if(!cur.n)cur=null}else{a[i]=cur;cur=s}renderInv()}
-function held(){const s=inv[sel];me.c.held.visible=!!s;if(s)me.c.held.material.color.set(itemDef(s)[3])}
+function held(){const s=inv[sel];const mc=mcHeldUpdate(s);me.c.held.visible=!!s&&!mc;if(s)me.c.held.material.color.set(itemDef(s)[3])}
 $('#inv').onmousedown=e=>{if(e.target.closest('.slot'))return;if(cur){throwItem(cur);cur=null;renderInv()}};
 document.addEventListener('mousedown',e=>{if(!invOpen||!cur||e.target.closest('#inv'))return;throwItem(cur);cur=null;renderInv()},true);
 onmousemove=e=>{$('#cur').style.left=e.clientX+8+'px';$('#cur').style.top=e.clientY+8+'px'};renderInv();
@@ -782,9 +963,20 @@ $('#trashBin').onclick=trashCreativeItem;$('#trashBin').oncontextmenu=e=>e.preve
 function useItem(h,sh){if(typeof sh!=='boolean')sh=!!K.Shift;if(h&&h.id&&OB[h.id]&&h.h&&h.h.distance<14&&interact(h.id,sh))return;
  const s=inv[sel];if(!s)return;const d=itemDef(s);me.c.st.use=.4;if(s.k==='cd'){useCD(s,null,sh);return}if(s.k==='feu_artifice'){fw();if(me.c.st.air&&eq.some(q=>q?.k==='elytre'))me.vy=14}const dec=()=>{if(gm==='survival'){s.n--;if(!s.n)inv[sel]=null;renderInv()}};
  if(s.model?.mdl&&h&&h.p){const gq=gridPlace(h,'model');if(gq){pendSel=1;send({t:'add',o:{type:'model',mdl:s.model.mdl,fmt:s.model.fmt||'glb',name:s.model.name||'Modèle 3D',p:gq.p,r:[...(s.model.r||gq.r)],s:[...(s.model.s||[1,1,1])],tex:s.model.tex??null,tx:[...(s.model.tx||[1,0,0,0])]}});dec()}return}
- if(FN[s.k]){FN[s.k](dec,h||{});return}if(d[5])dec();else if(s.k.startsWith('o:')&&h&&h.p){const gq=gridPlace(h,s.k.slice(2));if(gq){pendSel=1;send({t:'add',o:{type:s.k.slice(2),p:gq.p,r:gq.r,s:[1,1,1],tex:null,tx:[1,0,0,0]}});dec()}}}
+ if(FN[s.k]){FN[s.k](dec,h||{});return}
+ if(mcDef(s.k)&&h&&h.p){ // bloc Minecraft : pose sur la grille + orientation
+  const id=mcId(s.k),def=mcDef(id),gq=gridPlace(h,id);
+  if(gq){pendSel=1;send({t:'add',o:{type:id,p:gq.p,r:mcPlaceRot(def,gq.n,yaw),s:[1,1,1],tex:null,tx:[1,0,0,0]}});me.c.st.use=.3;dec()}return}
+ if(d[5])dec();else if(s.k.startsWith('o:')&&h&&h.p){const gq=gridPlace(h,s.k.slice(2));if(gq){pendSel=1;send({t:'add',o:{type:s.k.slice(2),p:gq.p,r:gq.r,s:[1,1,1],tex:null,tx:[1,0,0,0]}});dec()}}}
 const dropMaps={};
-function dropTexture(item){const def=itemDef(item),key=[item.k,item.name||'',item.n||1].join('|');if(dropMaps[key])return dropMaps[key];const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d');x.clearRect(0,0,64,64);x.fillStyle='#ffffff';x.textAlign='center';x.textBaseline='middle';const m=String(def[1]||'📦').match(/src=["']([^"']+)["']/);if(m){const im=new Image();im.onload=()=>{x.clearRect(0,0,64,64);x.drawImage(im,5,5,54,54);if(item.n>1){x.fillStyle='#111';x.font='bold 16px system-ui';x.textAlign='right';x.fillText(String(item.n),62,60)}tex.needsUpdate=true};im.src=m[1]}else{x.font='46px system-ui,"Apple Color Emoji","Segoe UI Emoji"';x.fillText(String(def[1]||'📦'),32,33);if(item.n>1){x.fillStyle='#111';x.font='bold 16px system-ui';x.textAlign='right';x.fillText(String(item.n),62,60)}}const tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;tex.magFilter=THREE.NearestFilter;return dropMaps[key]=tex}
+function dropTexture(item){const def=itemDef(item),key=[item.k,item.name||'',item.n||1].join('|');if(dropMaps[key])return dropMaps[key];const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d');x.clearRect(0,0,64,64);x.fillStyle='#ffffff';x.textAlign='center';x.textBaseline='middle';
+ const mcb=mcDef(item.k);
+ if(mcb){ // blocs Minecraft : la vignette du bloc au sol
+  const tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;tex.magFilter=THREE.NearestFilter;
+  const draw=()=>{const u=mcIcons.get(mcb.id)||mcIconRender(mcb.id);if(!u)return 0;const im=new Image();im.onload=()=>{x.clearRect(0,0,64,64);x.imageSmoothingEnabled=false;x.drawImage(im,0,0,64,64);if(item.n>1){x.fillStyle='#111';x.font='bold 16px system-ui';x.textAlign='right';x.fillText(String(item.n),62,60)}tex.needsUpdate=true};im.src=u;return 1};
+  if(!draw()){const w=setInterval(()=>{if(draw())clearInterval(w)},150)}
+  return dropMaps[key]=tex}
+ const m=String(def[1]||'📦').match(/src=["']([^"']+)["']/);if(m){const im=new Image();im.onload=()=>{x.clearRect(0,0,64,64);x.drawImage(im,5,5,54,54);if(item.n>1){x.fillStyle='#111';x.font='bold 16px system-ui';x.textAlign='right';x.fillText(String(item.n),62,60)}tex.needsUpdate=true};im.src=m[1]}else{x.font='46px system-ui,"Apple Color Emoji","Segoe UI Emoji"';x.fillText(String(def[1]||'📦'),32,33);if(item.n>1){x.fillStyle='#111';x.font='bold 16px system-ui';x.textAlign='right';x.fillText(String(item.n),62,60)}}const tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;tex.magFilter=THREE.NearestFilter;return dropMaps[key]=tex}
 function addDrop(raw){if(!raw?.id||!Array.isArray(raw.p)||!raw.item)return;const old=DROPS[raw.id];if(old){moveDrop({id:raw.id,p:raw.p,v:raw.v});return}itemDef(raw.item);const g=new THREE.Group(),shadow=new THREE.Mesh(new THREE.CircleGeometry(.16,16).rotateX(-PI/2),new THREE.MeshBasicMaterial({color:0x111111,transparent:true,opacity:.25,depthWrite:false}));shadow.position.y=-.1;g.add(shadow);const mat=new THREE.MeshBasicMaterial({map:dropTexture(raw.item),transparent:true,side:THREE.DoubleSide,depthWrite:false});for(const a of[0,PI/2]){const card=new THREE.Mesh(new THREE.PlaneGeometry(.34,.34),mat);card.position.y=.16;card.rotation.y=a;g.add(card)}g.renderOrder=5;sc.add(g);const p=new THREE.Vector3(...raw.p),v=new THREE.Vector3(...(raw.v||[0,0,0]));DROPS[raw.id]={id:raw.id,owner:raw.owner,item:cloneItem(raw.item),p,v,netP:p.clone(),netV:v.clone(),g,phase:Math.random()*PI*2,lastSent:0,pickupAt:0,pendingAt:0,pickupAfter:raw.pickupAfter||((raw.born||Date.now())+600),expireAt:+raw.expireAt||((+raw.born||Date.now())+DROP_TTL)};g.position.copy(p)}
 function moveDrop(m){const d=DROPS[m.id];if(!d||!Array.isArray(m.p))return;d.netP.set(+m.p[0]||0,+m.p[1]||0,+m.p[2]||0);if(Array.isArray(m.v))d.netV.set(+m.v[0]||0,+m.v[1]||0,+m.v[2]||0);d.lastNet=performance.now();if(d.netP.distanceTo(d.p)>4)d.p.copy(d.netP)}
 function removeDrop(id){const d=DROPS[id];if(!d)return;sc.remove(d.g);d.g.traverse(q=>{if(q.geometry)q.geometry.dispose();if(q.material&&!Array.isArray(q.material)&&q.material!==dropMaps[d.item.k])q.material.dispose()});delete DROPS[id]}
@@ -898,11 +1090,15 @@ function quickStack(a,i){const s=a[i];if(!s)return;const dest=(a===inv)?chestArr
  if(max>1)for(let k=0;k<dest.length&&s.n>0;k++){const t=dest[k];if(t&&t.k===s.k&&!t.model&&!t.cid&&t.n<max){const n=Math.min(max-t.n,s.n);t.n+=n;s.n-=n}}
  if(!s.n)a[i]=null;else{const e=dest.indexOf(null);if(e>=0){dest[e]=s;a[i]=null}}renderInv()}
 // recette du coffre en survie : 8 planches (ou 8 bois), comme dans Minecraft
+/* 8 planches (n'importe quelle essence) donnent un coffre de 27 emplacements */
+const MC_PLANKS=MCB.filter(b=>b.id.endsWith('_planks')).map(b=>b.id).concat(['planche']);
 function craftBtn(){const el=$('#craf');if(!el)return;let mat=null;
  if(gm==='survival'){const cnt=k=>inv.reduce((s,it)=>s+(it&&it.k===k&&!it.model&&!it.cid?it.n:0),0);
-  if(cnt('planche')>=8)mat='planche';else if(cnt('bois')>=8)mat='bois'}
+  for(const k of MC_PLANKS)if(cnt(k)>=8){mat=k;break}
+  if(!mat&&cnt('bois')>=8)mat='bois'}
  if(!mat){el.innerHTML='';return}
- el.innerHTML=`<button id="bCraft" title="8 planches (ou 8 bois) donnent un coffre de 27 emplacements">🔨 Fabriquer un coffre <small>(${mat==='planche'?'8 planches':'8 bois'})</small></button>`;
+ const label=mat==='bois'?'8 bois':mat==='planche'?'8 planches':'8 '+itemDef(mat)[0].toLowerCase();
+ el.innerHTML=`<button id="bCraft" title="8 planches (ou 8 bois) donnent un coffre de 27 emplacements">🔨 Fabriquer un coffre <small>(${label})</small></button>`;
  $('#bCraft').onclick=()=>craftChest(mat)}
 function craftChest(mat){let need=8;for(let i=0;i<inv.length&&need>0;i++){const s=inv[i];if(s&&s.k===mat&&!s.model&&!s.cid){const t=Math.min(s.n,need);s.n-=t;need-=t;if(!s.n)inv[i]=null}}
  if(need>0)return;giveItem({k:'o:coffre',n:1});log('🔨 Coffre fabriqué avec 8 '+String(mat).replace(/</g,'&lt;')+'.');renderInv()}
@@ -1105,7 +1301,7 @@ let tool='select',pal=null,cat='Nature',brush={r:5,s:.5,m:1},snapOn=0,shown=-1;c
 const TT=[['select','🖱️','Sélection'],['move','↔️','Déplacer'],['rotate','🔄','Pivoter'],['scale','⤢','Échelle'],['paintobj','🖌️','Peinture']],TR=[['raise','⛰️','Monter'],['lower','🕳️','Creuser'],['smooth','〰️','Lisser'],['flatten','▬','Aplatir'],['paint','🎨','Peindre']];
 const bp=$('#bp'),bt=$('#bt'),pp=$('#pp'),B=(h,on,f,v)=>`<button class="${on?'on':''}" data-f="${f}" data-v="${v}">${h}</button>`;
 function syncB(){if(build)unlock();[bp,bt,pp].forEach(e=>e.classList.toggle('hid',!build));$('#badge').classList.toggle('hid',!build);if(build){drawBP();drawPP()}for(const id in OB)setVis(OB[id])}
-function drawBP(){bp.innerHTML=`<h3 style="margin:0 0 6px">📚 BIBLIOTHÈQUE</h3><div class=g>${Object.keys(LIB).map(c=>B(c,c===cat,'cat',c)).join('')}</div><div class=cards>${Object.keys(LIB[cat]).map(t=>`<div class="card ${pal===t&&tool==='place'?'on':''}" data-t="${t}"><div>${EMO[t]||'📦'}</div>${nm(t)}</div>`).join('')}</div><div class=hint>① Choisis un objet ② Clique dans le monde pour le poser ③ Outil 🖱 Sélection : clique un objet pour le modifier. Outils ↔️ 🔄 ⤢ : flèches, ronds et cubes colorés à glisser.</div>`;drawBT()}
+function drawBP(){bp.innerHTML=`<h3 style="margin:0 0 6px">📚 BIBLIOTHÈQUE</h3><div class=g>${Object.keys(LIB).map(c=>B(c,c===cat,'cat',c)).join('')}</div><div class=cards>${Object.keys(LIB[cat]).map(t=>`<div class="card ${pal===t&&tool==='place'?'on':''}" data-t="${t}"><div>${EMO[t]||'📦'}</div>${mcDef(t)?mcDef(t).name:nm(t)}</div>`).join('')}</div><div class=hint>① Choisis un objet ② Clique dans le monde pour le poser ③ Outil 🖱 Sélection : clique un objet pour le modifier. Outils ↔️ 🔄 ⤢ : flèches, ronds et cubes colorés à glisser.</div>`;drawBT()}
 bp.onclick=e=>{const c=e.target.closest('.card');if(c){pal=c.dataset.t;tool='place'}else{const b=e.target.closest('[data-f]');if(b)cat=b.dataset.v}drawBP()};
 function drawBT(){const tb=([t,e,n])=>`<button class="${tool===t?'on':''}" data-f=tool data-v=${t}>${e}<small>${n}</small></button>`;
  bt.innerHTML=`<div class=g>${TT.map(tb).join('')}<span class=sep></span>${TR.map(tb).join('')}<span class=sep></span><label style="margin:0 8px"><input type=checkbox id=snap ${snapOn?'checked':''}> Magnétisme</label></div>`+(TERR.includes(tool)?`<div class=g>Taille <input type=range id=bs min=1 max=30 value=${brush.r}> Force <input type=range id=bf min=.05 max=1 step=.05 value=${brush.s}> ${TN.map((n,i)=>B(n,i===brush.m,'mat',i)).join('')}</div>`:'')+(tool==='paintobj'?`<div class=g>🖌️ Couleur <input type=color id=pc value="${pcol}"> ${Object.keys(PRE).map(n=>B(n,paint==='p:'+n,'pt','p:'+n)).join('')}${B('📁 Texture PNG',0,'pt','up')}</div>`:'')+(tool==='place'?`<div style="padding:4px">➕ Pose de <b>${nm(pal)}</b> : clique dans le monde</div>`:'')}
@@ -1138,9 +1334,11 @@ function dragMove(e){const o=OB[selId].o,r=ray(e),{i,D,P,o0}=gd,now=performance.
  else{const dt=tAx(r,P,D)-gd.t0;if(tool==='move')o.p=o0.p.map((v,k)=>D.getComponent(k)?snp(v+D.getComponent(k)*dt):v);else{const s=[...o0.s];s[i]=Math.max(.05,o0.s[i]*(1+dt/(gd.s*1.25)));o.s=s}}
  applyObj(selId,1);if(now-gd.last>60){gd.last=now;send({t:'upd',id:selId,p:{p:o.p,r:o.r,s:o.s}})}}
 // ---------- physique, casse
-const DR={arbre:[['bois',4],['pomme',1]],rocher:[['pierre',3]],buisson:[['baton',2],['raisin',1]],fleur:[['miel',1]],herbe:[['carotte',1]],champignon:[['pain',1]],tronc:[['bois',3]],souche:[['bois',2]]},HARD={arbre:3,rocher:3,tronc:2.5,petite_maison:6,grande_maison:8,garage:6,magasin:6,cabane:4,bâtiment_moderne:9};let brk=null,ldown=0;const breakPending=new Set();
-function breakObject(id){const o=OB[id]?.o;if(!o||breakPending.has(id))return;breakPending.add(id);setTimeout(()=>breakPending.delete(id),2500);const items=o.type==='model'?[]:(gm==='creative'?[{k:'o:'+o.type,n:1}]:(DR[o.type]||[['o:'+o.type,1]]).map(([k,n])=>({k,n})));send({t:'break',id,items,drop:gm==='survival'})}
-function startBreak(e){tryHit();const h=pick(e);me.c.st.atk=.35;me.atkc++;if(!h.id||!OB[h.id]||OB[h.id].o.vis===0||!h.h||h.h.distance>=14)return;if(gm==='creative'){breakObject(h.id);return}if(performance.now()-lastSw<350)return;lastSw=performance.now();brk={id:h.id,t:0,need:(HARD[OB[h.id].o.type]||1.5)/(inv[sel]?.k==='hache'?3:inv[sel]?.k==='pioche'?1.5:1)}}
+const DR={arbre:[['bois',4],['pomme',1]],rocher:[['pierre',3]],buisson:[['baton',2],['raisin',1]],fleur:[['miel',1]],herbe:[['carotte',1]],champignon:[['pain',1]],tronc:[['bois',3]],souche:[['bois',2]]},HARD={arbre:3,rocher:3,tronc:2.5,petite_maison:6,grande_maison:8,garage:6,magasin:6,cabane:4,bâtiment_moderne:9};
+for(const b of MCB)HARD[b.id]=b.hard;   // dureté officielle des blocs Minecraft
+let brk=null,ldown=0;const breakPending=new Set();
+function breakObject(id){const o=OB[id]?.o;if(!o||breakPending.has(id))return;breakPending.add(id);setTimeout(()=>breakPending.delete(id),2500);const items=o.type==='model'?[]:(gm==='creative'?[{k:mcItemKey(o.type),n:1}]:(DR[o.type]||[[mcItemKey(o.type),1]]).map(([k,n])=>({k,n})));send({t:'break',id,items,drop:gm==='survival'})}
+function startBreak(e){tryHit();const h=pick(e);me.c.st.atk=.35;me.atkc++;if(!h.id||!OB[h.id]||OB[h.id].o.vis===0||!h.h||h.h.distance>=14)return;if(gm==='creative'){breakObject(h.id);return}if(performance.now()-lastSw<350)return;lastSw=performance.now();brk={id:h.id,t:0,need:(mcBreakNeed(OB[h.id].o.type,inv[sel])??(HARD[OB[h.id].o.type]||1.5)/(inv[sel]?.k==='hache'?3:inv[sel]?.k==='pioche'?1.5:1))}}
 const _tri=new THREE.Triangle(),_ta=new THREE.Vector3(),_tb=new THREE.Vector3(),_tc=new THREE.Vector3(),_cp=new THREE.Vector3(),_cn=new THREE.Vector3(),_delta=new THREE.Vector3(),_center=new THREE.Vector3();
 function collideModelMeshes(){let ground=T.get(me.pos.x,me.pos.z);const radius=.29,offsets=[.22,.88,1.54],maxTriangles=6000;
  for(const id in OB){const b=OB[id],o=b.o;if(o.type!=='model'||o.tch===0||!b.colliders?.length)continue;
@@ -1156,15 +1354,25 @@ function collideModelMeshes(){let ground=T.get(me.pos.x,me.pos.z);const radius=.
  }
  return ground}
 function collide(){let gr=T.get(me.pos.x,me.pos.z);const px=me.pos.x,pz=me.pos.z,r=.3;
- for(const id in OB){const o=OB[id].o,x=OB[id].bx;if(o.type==='model'||o.tch===0||!x||px+r<x.min.x||px-r>x.max.x||pz+r<x.min.z||pz-r>x.max.z)continue;
-  if(x.max.y<=me.pos.y+.55){if(x.max.y>gr)gr=x.max.y}else if(x.min.y<me.pos.y+1.8){const a=px+r-x.min.x,b=x.max.x+r-px,c=pz+r-x.min.z,d=x.max.z+r-pz,m=Math.min(a,b,c,d);if(m===a)me.pos.x-=a;else if(m===b)me.pos.x+=b;else if(m===c)me.pos.z-=c;else me.pos.z+=d}}return Math.max(gr,collideModelMeshes())}
+ for(const id in OB){const b=OB[id],o=b.o;if(o.type==='model'||o.tch===0)continue;
+  const d=b.g.userData.def;if(d&&!d.solid)continue;                 // fleur, torche, eau : traversables
+  const x=b.bx;if(!x||x.isEmpty())continue;const x0=x.min.x,x1=x.max.x,y0=x.min.y,y1=x.max.y,z0=x.min.z,z1=x.max.z;
+  if(px+r<x0||px-r>x1||pz+r<z0||pz-r>z1)continue;
+  if(y0>me.pos.y+.62)continue;                                    // au-dessus : on passe dessous
+  if(y1<=me.pos.y+.62){if(y1>gr)gr=y1}                            // sol, ou marche de moins de 62 cm
+  else if(y0<me.pos.y+1.8){const a=px+r-x0,b2=x1+r-px,c=pz+r-z0,d=z1+r-pz,m=Math.min(a,b2,c,d);if(m===a)me.pos.x-=a;else if(m===b2)me.pos.x+=b2;else if(m===c)me.pos.z-=c;else me.pos.z+=d}}
+ return Math.max(gr,collideModelMeshes())}
 function tick(dt){for(let i=ticks.length;i--;)if(ticks[i](dt)===1)ticks.splice(i,1);tickDrops(dt);for(const id in OB){const b=OB[id],o=b.o;if(o.anch===0&&!(gd&&dragId==id)){const gr=T.get(o.p[0],o.p[2]);b.vy=(b.vy||0)-22*dt;let y=o.p[1]+b.vy*dt;if(y<=gr){y=gr;b.vy=0}if(y!==o.p[1]){o.p[1]=y;applyObj(id,1)}}}
  if(selId!==shown){shown=selId;if(build)drawPP()}
  if(brk){if(!ldown||!active())brk=null;else{brk.t+=dt;brk.a=(brk.a||0)+dt;brk.c=(brk.c||0)+dt;if(brk.a>.35){brk.a=0;me.c.st.atk=.35;me.atkc++}if(brk.c>.15&&lme){brk.c=0;if(pick(lme).id!=brk.id)brk=null}}}
  if(brk&&brk.t>=brk.need){if(OB[brk.id])breakObject(brk.id);brk=null}
  $('#brk').style.display=brk?'block':'none';if(brk)$('#brk i').style.width=brk.t/brk.need*100+'%'}
-function allGrid(el,q,cb,f){el.innerHTML='';q=q.toLowerCase();Object.keys(IT).filter(k=>IT[k][0].toLowerCase().includes(q)&&(!f||f(k))).forEach(k=>{const d=document.createElement('div');d.className='slot';d.innerHTML=IT[k][1];tipBind(d,()=>itemTip({k}));d.onclick=()=>cb(k);el.append(d)})}
-const cg=()=>{const cats=gm==='creative'?CREATIVE_CATS:CATS;ctabs();const filter=cats[ccat];allGrid($('#cg'),$('#cq').value,k=>give(k,IT[k][2]),k=>(gm!=='creative'||CREATIVE_ALLOWED.has(k))&&(!filter||filter(k)))};
+function allGrid(el,q,cb,f,right){el.innerHTML='';q=q.toLowerCase();
+ // la recherche accepte le nom français (« planches ») comme l’identifiant Minecraft (« oak_planks »)
+ Object.keys(IT).filter(k=>((IT[k][0].toLowerCase().includes(q))||k.toLowerCase().includes(q))&&(!f||f(k))).forEach(k=>{const d=document.createElement('div');d.className='slot';d.dataset.k=k;d.innerHTML=IT[k][1];tipBind(d,()=>itemTip({k}));d.onclick=()=>cb(k);if(right)d.oncontextmenu=e=>{e.preventDefault();right(k)};el.append(d)})}
+/* clic droit dans l'inventaire créatif : le bloc part directement dans la main */
+function holdBlock(k){const max=itemDef(k)[2]||64;let i=inv.findIndex((x,j)=>j<9&&!x);if(i<0)i=sel;inv[i]={k,n:max};sel=i;renderInv();log('🧱 '+itemDef(k)[0]+' dans la barre d’accès rapide (touche '+(i+1)+').')}
+const cg=()=>{const cats=gm==='creative'?CREATIVE_CATS:CATS;ctabs();const filter=cats[ccat];allGrid($('#cg'),$('#cq').value,k=>give(k,IT[k][2]),k=>(gm!=='creative'||CREATIVE_ALLOWED.has(k))&&(!filter||filter(k)),gm==='creative'?holdBlock:null)};
 $('#cq').oninput=cg;$('#ct').onclick=e=>{const b=e.target.closest('button');if(b){ccat=b.dataset.c;cg()}};
 // ---------- entrées
 const K={};let drag=0,rdown=null,brushing=0,lastE=null,flatY=0,lastBr=0;const ndc=new THREE.Vector2(),rc=new THREE.Raycaster();
@@ -1222,7 +1430,7 @@ function gridPlace(h,type){if(!h||!h.p)return null;const A=Math.abs,n=new THREE.
  else{x=Math.floor(h.p.x);z=Math.floor(h.p.z);y=Math.round(T.get(x+.5,z+.5))}
  const blk=BSET.has(type);if(blk){for(const id in OB){const q=OB[id].o.p;if(BSET.has(OB[id].o.type)&&A(q[0]-x-.5)<.02&&A(q[1]-y)<.02&&A(q[2]-z-.5)<.02)return null}
   if(A(me.pos.x-x-.5)<.8&&A(me.pos.z-z-.5)<.8&&me.pos.y<y+1&&me.pos.y+1.8>y)return null}
- return{p:[x+.5,y,z+.5],r:[0,blk?0:Math.round(me.ry/(PI/2))*PI/2,0]}}
+ return{p:[x+.5,y,z+.5],r:[0,blk?0:Math.round(me.ry/(PI/2))*PI/2,0],n:(o&&h.h.face)?[n.x,n.y,n.z]:[0,1,0]}}
 const beep=(f,d=.3,t='sine')=>{try{_ac=_ac||new AudioContext();const o=_ac.createOscillator(),g=_ac.createGain(),n=_ac.currentTime;o.type=t;o.frequency.value=f;g.gain.setValueAtTime(.2,n);g.gain.exponentialRampToValueAtTime(.001,n+d);o.connect(g).connect(_ac.destination);o.start();o.stop(n+d)}catch(e){}};
 const T8=(s,f)=>{let t=s;ticks.push(dt=>{t-=dt;if(t<=0)return 1;f()})},air=()=>me.c.st.air=1,
  hhmm=()=>{const h=((((tOff+Date.now()/480000)%1)+1)%1*24+6)%24;return String(h|0).padStart(2,'0')+':'+String(h%1*60|0).padStart(2,'0')},
