@@ -378,13 +378,14 @@ function loadTile(name) {
   const src = PNG.sync.read(fs.readFileSync(path.join(TEX_SRC, name + '.png')));
   const out = new PNG({ width: TILE, height: TILE });
   out.data.fill(0);
-  // première image d'une texture animée (les images sont empilées verticalement)
-  const scale = Math.min(1, TILE / src.width);
-  const sw = Math.max(1, Math.round(src.width * scale)), sh = Math.max(1, Math.round(src.height * scale));
+  // Les textures animées sont des images carrées empilées verticalement :
+  // ne pas réduire toute l'animation en une seule tuile (cela rend, par
+  // exemple, fire_0 et soul_fire_0 transparents). On ne prend que la première.
+  const frame = Math.max(1, Math.min(src.width, src.height));
   for (let y = 0; y < TILE; y++) {
-    const sy = Math.min(Math.max(0, sh - 1), Math.round(y * sh / TILE));
+    const sy = Math.min(frame - 1, Math.floor(y * frame / TILE));
     for (let x = 0; x < TILE; x++) {
-      const sx = Math.min(sw - 1, Math.round(x * sw / TILE));
+      const sx = Math.min(frame - 1, Math.floor(x * frame / TILE));
       const s = (sy * src.width + sx) * 4, d = (y * TILE + x) * 4;
       out.data[d] = src.data[s]; out.data[d + 1] = src.data[s + 1]; out.data[d + 2] = src.data[s + 2]; out.data[d + 3] = src.data[s + 3];
     }

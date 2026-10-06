@@ -10,7 +10,8 @@
  *
  *   node tools/preview-blocks.mjs                       # 96 blocs emblématiques
  *   node tools/preview-blocks.mjs stone oak_stairs …    # blocs choisis
- *   node tools/preview-blocks.mjs --all                 # tous les blocs
+ *   node tools/preview-blocks.mjs --all                 # aperçu de tous les blocs
+ *   node tools/preview-blocks.mjs --icons               # atlas d'icônes 3D du jeu
  *   SIZE=48 COLS=12 node tools/preview-blocks.mjs       # taille / colonnes
  * ------------------------------------------------------------------------- */
 import fs from 'node:fs';
@@ -18,8 +19,10 @@ import path from 'node:path';
 import { PNG } from 'pngjs';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
-const SIZE = +(process.env.SIZE || 64);
-const COLS = +(process.env.COLS || 16);
+const args = process.argv.slice(2);
+const BUILD_ICONS = args.includes('--icons');
+const SIZE = BUILD_ICONS ? 64 : +(process.env.SIZE || 64);
+const COLS = BUILD_ICONS ? 16 : +(process.env.COLS || 16);
 
 /* --- charge les données du jeu (mc/blocks.js + mc/geom.js) --- */
 const win = {};
@@ -32,9 +35,8 @@ const atlasPNG = PNG.sync.read(fs.readFileSync(path.join(ROOT, 'textures/minecra
 const atlas = { ...MC_ATLAS, pixels: atlasPNG.data };
 
 /* --- choix des blocs --- */
-const args = process.argv.slice(2);
 let blocks;
-if (args.includes('--all')) blocks = MC_BLOCKS;
+if (BUILD_ICONS || args.includes('--all')) blocks = MC_BLOCKS;
 else if (args.length) {
   const byId = new Map(MC_BLOCKS.map(b => [b.id, b]));
   blocks = args.map(a => byId.get(a)).filter(Boolean);
@@ -129,7 +131,11 @@ blocks.forEach((b, i) => {
   const ox = (i % COLS) * SIZE, oy = Math.floor(i / COLS) * SIZE;
   PNG.bitblt(img, sheet, 0, 0, SIZE, SIZE, ox, oy);
 });
-const out = path.join(ROOT, 'tools/preview-blocks.png');
+const out = path.join(ROOT, BUILD_ICONS ? 'textures/minecraft/block-icons.png' : 'tools/preview-blocks.png');
 fs.writeFileSync(out, PNG.sync.write(sheet));
-console.log(`🖼  ${blocks.length} blocs → ${path.relative(ROOT, out)} (${COLS * SIZE}×${rows * SIZE}, ${fs.statSync(out).size / 1024 | 0} Ko)`);
-console.log('   ' + blocks.map(b => b.id).join(', '));
+if (BUILD_ICONS) {
+  console.log(`🧱  Atlas prêt : ${blocks.length} icônes 3D (${COLS} colonnes × ${rows} rangées, tuiles ${SIZE}×${SIZE}) → ${path.relative(ROOT, out)} (${fs.statSync(out).size / 1024 | 0} Ko)`);
+} else {
+  console.log(`🖼  ${blocks.length} blocs → ${path.relative(ROOT, out)} (${COLS * SIZE}×${rows * SIZE}, ${fs.statSync(out).size / 1024 | 0} Ko)`);
+  console.log('   ' + blocks.map(b => b.id).join(', '));
+}

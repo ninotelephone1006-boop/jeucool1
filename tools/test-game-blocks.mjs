@@ -58,7 +58,7 @@ const win = { MC_BLOCKS: null, MC_ATLAS: null, MC_CATS: null, MCGeom: null };
 new Function('window', fs.readFileSync(path.join(ROOT, 'mc/blocks.js'), 'utf8'))(win);
 new Function('window', fs.readFileSync(path.join(ROOT, 'mc/geom.js'), 'utf8'))(win);
 const api = new Function('window', 'THREE', 'document', 'me', 'log', 'PI', 'performance', 'requestAnimationFrame',
-  section + `\nreturn {isMCB,mcId,mcDef,mcMesh,mcGeometry,mcIconHTML,mcIconRender,mcIcons,mcItemKey,mcPlaceRot,mcBreakNeed,mcTip,mcCatLabel,MCB,MCI,MC_CREATIVE_CATS,LEGACY,mcHeldUpdate,MC_FACE_LIGHT};`)
+  section + `\nreturn {isMCB,mcId,mcDef,mcMesh,mcGeometry,mcIconHTML,MC_ICON_INDEX,MC_ICON_COLS,MC_ICON_ROWS,MC_ICON_FILE,mcItemKey,mcPlaceRot,mcBreakNeed,mcTip,mcCatLabel,MCB,MCI,MC_CREATIVE_CATS,LEGACY,mcHeldUpdate,MC_FACE_LIGHT};`)
   (win, THREE, document, me, log, Math.PI, performance, () => { });
 
 /* ------------------------------------------------------------------ tests */
@@ -69,17 +69,18 @@ console.log(`\n🧪 Code « blocs Minecraft » du jeu (${api.MCB.length} blocs)\
 
 /* 1. maillages + icônes de tous les blocs */
 let noMesh = [], noIcon = [], tris = 0, verts = 0;
-for (const b of api.MCB) {
+for (const [i, b] of api.MCB.entries()) {
   const g = api.mcMesh(b.id, 1);
   if (!g || !g.children.length) { noMesh.push(b.id); continue; }
   const geo = api.mcGeometry(b.id);
   verts += geo.attributes.position.count;
   tris += geo.attributes.position.count / 3;
-  if (!api.mcIconRender(b.id)) noIcon.push(b.id);
+  const icon = api.mcIconHTML(b.id);
+  if (api.MC_ICON_INDEX.get(b.id) !== i || !icon.includes(`data-mc="${b.id}"`) || !icon.includes('background-position:')) noIcon.push(b.id);
 }
 if (noMesh.length) fail(`${noMesh.length} blocs sans maillage : ${noMesh.slice(0, 6).join(', ')}`);
-if (noIcon.length) fail(`${noIcon.length} blocs sans icône : ${noIcon.slice(0, 6).join(', ')}`);
-if (!noMesh.length && !noIcon.length) console.log(`   ✅ ${api.MCB.length} blocs : maillage + icône (${Math.round(tris)} triangles, ${Math.round(verts / 1000)}k sommets)`);
+if (noIcon.length) fail(`${noIcon.length} blocs absents de l’atlas d’icônes : ${noIcon.slice(0, 6).join(', ')}`);
+if (!noMesh.length && !noIcon.length) console.log(`   ✅ ${api.MCB.length} blocs : maillage + icône 3D pré-calculée (${Math.round(tris)} triangles, ${Math.round(verts / 1000)}k sommets)`);
 
 /* 2. géométrie : UV dans l’atlas et normales unitaires */
 let badUv = 0, badN = 0;
@@ -94,12 +95,15 @@ if (!badUv && !badN) console.log('   ✅ coordonnées de texture et normales cor
 
 /* 3. icônes et vignettes HTML */
 const html1 = api.mcIconHTML('stone');
-if (!/^<img class="mci"/.test(html1)) fail('mcIconHTML ne produit pas de balise image : ' + html1.slice(0, 60));
+if (!/^<span class="mci"/.test(html1)) fail('mcIconHTML ne produit pas une vignette sprite : ' + html1.slice(0, 60));
 const plankIcon = api.mcIconHTML('oak_planks');
-if (!/data-mc="oak_planks"/.test(plankIcon)) fail('l’icône ne pointe pas vers le modèle 3D Minecraft');
-if (/src="textures\/minecraft\/blocks\//.test(plankIcon)) fail('l’icône affiche encore seulement la face avant du bloc');
-if (!/src="data:image\/png/.test(plankIcon) && !/data-mc="oak_planks"/.test(plankIcon)) fail('icône sans source/rendu 3D');
-console.log('   ✅ vignettes isométriques 3D prêtes (inventaire, barre rapide, bibliothèque)');
+if (!/data-mc="oak_planks"/.test(plankIcon)) fail('l’icône ne pointe pas vers le bloc Minecraft');
+if (!/background-position:[0-9.]+% [0-9.]+%/.test(plankIcon)) fail('position de sprite manquante pour oak_planks');
+if (api.MC_ICON_COLS !== 16 || api.MC_ICON_ROWS !== Math.ceil(api.MCB.length / 16)) fail('dimensions de l’atlas d’icônes incohérentes');
+if (!fs.existsSync(path.join(ROOT, api.MC_ICON_FILE))) fail('atlas des icônes 3D absent : ' + api.MC_ICON_FILE);
+if (!html.includes('background-size:1600% 6600%')) fail('le CSS ne découpe pas correctement l’atlas d’icônes');
+if (/mcIconRenderer|function mcIconRender/.test(section)) fail('les icônes ne doivent pas créer de contexte WebGL à l’exécution');
+console.log('   ✅ atlas de vignettes isométriques 3D utilisé sans WebGL supplémentaire');
 
 /* Les boutons et fonds d’inventaire utilisent les vrais sprites Minecraft. */
 const guiFiles = [
