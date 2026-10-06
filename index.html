@@ -22,10 +22,10 @@ button:hover{background:#5870a8}button.on{background:#e8a12e;color:#000}
 #menu button{display:block;width:100%}label{display:block;margin:6px 0;text-align:left}input[type=range]{width:100%}
 #hot{left:50%;bottom:10px;transform:translateX(-50%);display:flex;padding:5px;gap:3px}
 .slot{width:44px;height:44px;background:#222c;border:2px solid #666;border-radius:4px;position:relative;font-size:24px;text-align:center;line-height:40px;cursor:pointer}
-/* icônes de blocs Minecraft (vignettes isométriques de l'atlas) */
-.mci{width:100%;height:100%;display:block;image-rendering:pixelated;pointer-events:none}
-.slot>.mci{position:absolute;inset:0;border-radius:2px}
-#cur .mci{position:static;width:34px;height:34px}
+/* icônes de blocs Minecraft (textures officielles de l’inventaire) */
+.mci{width:100%;height:100%;display:block;image-rendering:pixelated;object-fit:contain;pointer-events:none}
+.slot>.mci{position:absolute;inset:0;padding:4px;border-radius:2px}
+#cur .mci{position:static;width:34px;height:34px;padding:2px}
 #cg .slot:hover{border-color:#ffd45e;background:#2c3a58}
 #cg::-webkit-scrollbar{width:10px}#cg::-webkit-scrollbar-thumb{background:#4a5c86;border-radius:6px}#cg::-webkit-scrollbar-track{background:#00000033}
 #bp .card .mci{width:32px;height:32px;margin:0 auto}
@@ -500,7 +500,7 @@ function mcMesh(id, noLight) {
   return g;
 }
 
-/* ---------- icônes 2D (isométrique, comme l’inventaire créatif) ---------- */
+/* ---------- icônes 2D (textures officielles + rendu 3D en secours) ---------- */
 const mcIcons = new Map();
 const mcIconSize = 64;
 let mcIconRenderer = null, mcIconScene = null, mcIconCam = null;
@@ -535,17 +535,32 @@ function mcIconRender(id) {
   mcIcons.set(id, url);
   return url;
 }
-/** Balise d’icône : l’image tout de suite si elle est prête, sinon un emplacement
- *  que la pompe remplira (seules les icônes réellement affichées sont dessinées). */
+function mcFaceTex(face) { return !face ? '' : (typeof face === 'string' ? face : (face.t || '')); }
+function mcIconTexture(id) {
+  const def = MCI.get(id);
+  if (!def) return '';
+  const faces = Array.isArray(def.boxes) && def.boxes[0] && typeof def.boxes[0][6] === 'object' ? def.boxes[0][6] : null;
+  const order = [];
+  if (def.facing || def.pillar) order.push('n', 's', 'e', 'w');
+  order.push('u', 'n', 's', 'e', 'w', 'd');
+  for (const key of order) {
+    const tex = mcFaceTex(faces && faces[key]);
+    if (tex) return `textures/minecraft/blocks/${tex}.png`;
+  }
+  return def.main ? `textures/minecraft/blocks/${def.main}.png` : '';
+}
+/** Balise d’icône : on privilégie la texture officielle du bloc (immédiate et fiable),
+ *  avec rendu 3D mis en cache en secours si un bloc atypique n’a pas de face exploitable. */
 function mcIconHTML(id) {
-  const url = mcIcons.get(id);
   const name = ((MCI.get(id) || {}).name || id).replace(/"/g, '');
+  const tex = mcIconTexture(id);
+  if (tex) return `<img class="mci" alt="${name}" src="${tex}">`;
+  const url = mcIcons.get(id);
   if (url) return `<img class="mci" alt="${name}" src="${url}">`;
   return `<img class="mci" data-mc="${id}" alt="${name}">`;
 }
-/* pompe : dessine, par petits lots et sans saccader le jeu, les icônes des blocs
- * réellement visibles à l’écran (inventaire créatif, barre rapide, bibliothèque),
- * puis remplit les balises <img> correspondantes. */
+/* pompe : ne sert plus que de secours ; elle dessine, par petits lots et sans saccader
+ * le jeu, les rares icônes encore sans texture directe puis remplit les <img>. */
 let mcIconFrame = 0;
 function mcIconPaint() {
   if (!mcAtlas.ready) return;
@@ -971,9 +986,9 @@ function useItem(h,sh){if(typeof sh!=='boolean')sh=!!K.Shift;if(h&&h.id&&OB[h.id
 const dropMaps={};
 function dropTexture(item){const def=itemDef(item),key=[item.k,item.name||'',item.n||1].join('|');if(dropMaps[key])return dropMaps[key];const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d');x.clearRect(0,0,64,64);x.fillStyle='#ffffff';x.textAlign='center';x.textBaseline='middle';
  const mcb=mcDef(item.k);
- if(mcb){ // blocs Minecraft : la vignette du bloc au sol
+ if(mcb){ // blocs Minecraft : texture officielle (ou vignette 3D en secours)
   const tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;tex.magFilter=THREE.NearestFilter;
-  const draw=()=>{const u=mcIcons.get(mcb.id)||mcIconRender(mcb.id);if(!u)return 0;const im=new Image();im.onload=()=>{x.clearRect(0,0,64,64);x.imageSmoothingEnabled=false;x.drawImage(im,0,0,64,64);if(item.n>1){x.fillStyle='#111';x.font='bold 16px system-ui';x.textAlign='right';x.fillText(String(item.n),62,60)}tex.needsUpdate=true};im.src=u;return 1};
+  const draw=()=>{const u=mcIconTexture(mcb.id)||mcIcons.get(mcb.id)||mcIconRender(mcb.id);if(!u)return 0;const im=new Image();im.onload=()=>{x.clearRect(0,0,64,64);x.imageSmoothingEnabled=false;x.drawImage(im,0,0,64,64);if(item.n>1){x.fillStyle='#111';x.font='bold 16px system-ui';x.textAlign='right';x.fillText(String(item.n),62,60)}tex.needsUpdate=true};im.src=u;return 1};
   if(!draw()){const w=setInterval(()=>{if(draw())clearInterval(w)},150)}
   return dropMaps[key]=tex}
  const m=String(def[1]||'📦').match(/src=["']([^"']+)["']/);if(m){const im=new Image();im.onload=()=>{x.clearRect(0,0,64,64);x.drawImage(im,5,5,54,54);if(item.n>1){x.fillStyle='#111';x.font='bold 16px system-ui';x.textAlign='right';x.fillText(String(item.n),62,60)}tex.needsUpdate=true};im.src=m[1]}else{x.font='46px system-ui,"Apple Color Emoji","Segoe UI Emoji"';x.fillText(String(def[1]||'📦'),32,33);if(item.n>1){x.fillStyle='#111';x.font='bold 16px system-ui';x.textAlign='right';x.fillText(String(item.n),62,60)}}const tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;tex.magFilter=THREE.NearestFilter;return dropMaps[key]=tex}
