@@ -43,7 +43,8 @@ function serveGame(res) {
 const STATIC_DIRS = new Map([
   ['/mc/', ['mc', new Map([['.js', 'text/javascript; charset=utf-8'], ['.json', 'application/json; charset=utf-8']])]],
   ['/textures/', ['textures', new Map([['.png', 'image/png'], ['.json', 'application/json; charset=utf-8']])]],
-  ['/Sounds/', ['Sounds', new Map([['.mp3', 'audio/mpeg'], ['.ogg', 'audio/ogg'], ['.wav', 'audio/wav']])]]
+  ['/Sounds/', ['Sounds', new Map([['.mp3', 'audio/mpeg'], ['.ogg', 'audio/ogg'], ['.wav', 'audio/wav']])]],
+  ['/tools/', ['tools', new Map([['.png', 'image/png'], ['.json', 'application/json; charset=utf-8']])]]
 ]);
 function serveStatic(url, req, res) {
   for (const [prefix, [dir, types]] of STATIC_DIRS) {

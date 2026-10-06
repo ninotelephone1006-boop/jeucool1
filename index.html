@@ -1090,11 +1090,15 @@ function quickStack(a,i){const s=a[i];if(!s)return;const dest=(a===inv)?chestArr
  if(max>1)for(let k=0;k<dest.length&&s.n>0;k++){const t=dest[k];if(t&&t.k===s.k&&!t.model&&!t.cid&&t.n<max){const n=Math.min(max-t.n,s.n);t.n+=n;s.n-=n}}
  if(!s.n)a[i]=null;else{const e=dest.indexOf(null);if(e>=0){dest[e]=s;a[i]=null}}renderInv()}
 // recette du coffre en survie : 8 planches (ou 8 bois), comme dans Minecraft
+/* 8 planches (n'importe quelle essence) donnent un coffre de 27 emplacements */
+const MC_PLANKS=MCB.filter(b=>b.id.endsWith('_planks')).map(b=>b.id).concat(['planche']);
 function craftBtn(){const el=$('#craf');if(!el)return;let mat=null;
  if(gm==='survival'){const cnt=k=>inv.reduce((s,it)=>s+(it&&it.k===k&&!it.model&&!it.cid?it.n:0),0);
-  if(cnt('planche')>=8)mat='planche';else if(cnt('bois')>=8)mat='bois'}
+  for(const k of MC_PLANKS)if(cnt(k)>=8){mat=k;break}
+  if(!mat&&cnt('bois')>=8)mat='bois'}
  if(!mat){el.innerHTML='';return}
- el.innerHTML=`<button id="bCraft" title="8 planches (ou 8 bois) donnent un coffre de 27 emplacements">🔨 Fabriquer un coffre <small>(${mat==='planche'?'8 planches':'8 bois'})</small></button>`;
+ const label=mat==='bois'?'8 bois':mat==='planche'?'8 planches':'8 '+itemDef(mat)[0].toLowerCase();
+ el.innerHTML=`<button id="bCraft" title="8 planches (ou 8 bois) donnent un coffre de 27 emplacements">🔨 Fabriquer un coffre <small>(${label})</small></button>`;
  $('#bCraft').onclick=()=>craftChest(mat)}
 function craftChest(mat){let need=8;for(let i=0;i<inv.length&&need>0;i++){const s=inv[i];if(s&&s.k===mat&&!s.model&&!s.cid){const t=Math.min(s.n,need);s.n-=t;need-=t;if(!s.n)inv[i]=null}}
  if(need>0)return;giveItem({k:'o:coffre',n:1});log('🔨 Coffre fabriqué avec 8 '+String(mat).replace(/</g,'&lt;')+'.');renderInv()}
