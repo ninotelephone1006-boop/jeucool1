@@ -677,13 +677,13 @@ const PM={m:'#d0d8e0',d:'#7a8590',s:'#8b5a2b',g:'#9a9aaa',h:'#5f5f72',y:'#ffd23a
 Object.assign(EMO,{bloc_planche:PX(['pppppppp','qqqqqqqq','pppqpppp','pppppppq','qqqqqqqq','ppppqppp','pqppppp','qqqqqqqq'].map(r=>r.padEnd(8,'p')),PM),bloc_bois:PX(['wwwwwwww','wqwwwqww','wwwqwwww','wqwwwwqw','wwwwqwww','wqwwwwww','wwwqwqww','wwwwwwww'],PM),
 lit:PX(['........','.bb.....','.bbllllll','.bbllllll','pppppppp','p......p','p......p','........'],PM),coffre:PX(['........','cccccccc','cwwwwwwc','cccececc','cccccccc','cwwwwwwc','cccccccc','........'],PM),
 panneau:PX(['........','aaaaaaaa','aaaaaaaa','aaaaaaaa','...ss...','...ss...','...ss...','...ss...'],PM),commande_bloc:PX(['oooooooo','okkkkkko','okoooook','okokkook','okoooook','okkkkkko','oooooooo','oooooooo'],PM)});
-IT['o:coffre'][4]='Objet à poser (clic droit) : 27 emplacements, contenu sauvegardé. Le contenu tombe au sol si le coffre est cassé.';
 const nm=t=>(t[0].toUpperCase()+t.slice(1)).replace(/_/g,' ');
 BLK.forEach(([k])=>EMO[k]=`<img src="${bcv(k).toDataURL()}" style="width:32px;image-rendering:pixelated;vertical-align:middle">`);
 const FOOD=[['pomme','Pomme','🍎'],['pain','Pain','🍞'],['steak','Steak','🥩'],['carotte','Carotte','🥕'],['pastèque','Pastèque','🍉'],['gâteau','Gâteau','🍰'],['cookie','Cookie','🍪'],['pizza','Pizza','🍕'],['burger','Burger','🍔'],['poisson','Poisson','🐟'],['lait','Lait','🥛'],['miel','Miel','🍯'],['oeuf','Œuf','🥚'],['raisin','Raisin','🍇']];
 const MAT=[['bois','Bois','🪵'],['planche','Planche','🟫'],['pierre','Pierre','🪨'],['fer','Fer','⛓️'],['verre','Verre','🪟'],['tissu','Tissu','🧶'],['baton','Bâton','🥢'],['marteau','Marteau','🔨'],['torche','Torche','🔦'],['sac','Sac à dos','🎒']];
 const IT={};FOOD.forEach(([k,n,e])=>IT[k]=[n,e,64,'#e94','Se mange (clic droit).',1]);MAT.forEach(([k,n,e])=>IT[k]=[n,e,k==='marteau'||k==='sac'?1:64,'#a98','Matériau / outil.']);
 Object.keys(LF).forEach(t=>IT['o:'+t]=[nm(t),EMO[t]||'📦',64,LF[t][0][7]||'#999','Objet à poser (clic droit).']);
+if(IT['o:coffre'])IT['o:coffre'][4]='Objet à poser (clic droit) : 27 emplacements, contenu sauvegardé. Le contenu tombe au sol si le coffre est cassé.';
 Object.assign(IT,{
 hache:['Hache',PX(['..mmm...','.mmmm...','.mmms...','..mms...','...s....','..s.....','.s......','s.......'],PM),1,'#d0d8e0','Casse les arbres 3× plus vite.'],
 pioche:['Pioche',PX(['.mmmmm..','m....dm.','.....sd.','....s..m','...s....','..s.....','.s......','s.......'],PM),1,'#d0d8e0','Casse plus vite.'],
