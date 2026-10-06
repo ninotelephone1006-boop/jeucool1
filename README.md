@@ -115,7 +115,7 @@ Les blocs sont rangés par onglets, comme dans Minecraft :
 | 🧰 Fonctionnel | 54 |
 | ✨ Spéciaux | 16 |
 
-Chaque case affiche maintenant une **vignette isométrique 3D** du vrai modèle Minecraft (dessus et côtés visibles), texturée depuis l’atlas officiel : on ne voit plus seulement la face avant du bloc. Les vignettes sont calculées et mises en cache à la demande, puis réutilisées dans l’inventaire, la barre rapide et les onglets créatifs. Le nom français et l’infobulle avec les propriétés restent disponibles.
+Chaque case affiche une **vignette isométrique 3D** du vrai modèle Minecraft (dessus et côtés visibles), texturée depuis l’atlas officiel : on ne voit plus seulement la face avant du bloc. Les 1 047 vignettes sont pré-calculées dans `textures/minecraft/block-icons.png`, puis affichées immédiatement dans l’inventaire, la barre rapide et les onglets créatifs. Elles ne créent pas de contexte WebGL supplémentaire, ce qui évite les icônes vides sur les appareils qui limitent le nombre de contextes graphiques. Le nom français et l’infobulle avec les propriétés restent disponibles.
 
 - **Clic** : la pile part dans l'inventaire.
 - **Clic droit** : le bloc est **équipé directement dans la barre d'accès rapide**
@@ -148,8 +148,9 @@ Minecraft équivalent au lieu de disparaître. De même, les objets « planche �
 ### Régénérer les données de blocs (optionnel)
 ```bash
 npm run fetch:mcdata   # télécharge textures + modèles + traductions Minecraft
-npm run build:blocks   # reconstruit l'atlas, mc/blocks.js et l'atlas du terrain
-npm test               # vérifie les 1 047 blocs (données, atlas, géométrie)
+npm run build:blocks   # reconstruit les données, l’atlas et les icônes 3D
+npm run build:icons    # (optionnel) régénère seulement les 1 047 icônes
+npm test               # vérifie données, géométrie et icônes
 npm run preview:blocks # planche d'aperçu de 145 blocs emblématiques
 ```
 
