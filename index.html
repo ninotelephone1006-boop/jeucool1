@@ -3,6 +3,8 @@
 <!-- Blocs Minecraft : données (1047 blocs, textures + propriétés) et géométrie -->
 <script src="mc/blocks.js"></script>
 <script src="mc/geom.js"></script>
+<!-- Physique / caméra / animations du joueur : reproduction exacte de Minecraft Java -->
+<script src="mc/playerphysics.js"></script>
 <script>
 (function(){const show=t=>{const m=document.getElementById('msg');if(m)m.textContent=t};
 window.addEventListener('error',e=>{if(e.target&&e.target!==window&&e.target.tagName==='SCRIPT')show('❌ Impossible de charger Three.js (connexion internet ?).');else if(e.message)show('❌ Erreur : '+e.message)},true);
@@ -54,6 +56,9 @@ button:hover{background:#5870a8}button.on{background:#e8a12e;color:#000}
 #zhud{position:fixed;left:50%;top:calc(50% + 26px);transform:translateX(-50%);background:#0007;border-radius:8px;padding:3px 9px;font-size:12px;opacity:0;transition:opacity .18s;pointer-events:none;z-index:7;white-space:nowrap}
 #zhud.on{opacity:1}
 #ztg{position:fixed;width:28px;height:28px;margin:-14px;border:2px solid #fff9;border-radius:50%;box-shadow:0 0 6px #000a;pointer-events:none;display:none;z-index:7}
+#dbg{position:fixed;left:8px;top:8px;background:#0009;border-radius:6px;padding:8px 10px;font:11px/1.5 ui-monospace,Menlo,Consolas,monospace;white-space:pre;pointer-events:none;z-index:6;display:none;text-shadow:1px 1px 0 #000;max-width:46vw}
+#dbg.on{display:block}
+#dbg b{color:#ffd45e;font-weight:600}
 #ztg:before{content:'';position:absolute;left:11px;top:11px;width:4px;height:4px;background:#fff9;border-radius:50%}
 #cmdout{position:fixed;inset:0;pointer-events:none;z-index:8}#cmdout>*{pointer-events:auto}#cmd{inset:0;margin:auto;width:560px;height:fit-content;z-index:20}#cmt{width:100%;height:240px;background:#111c;color:#9f9;font:12px monospace;border:0;border-radius:8px;padding:8px;user-select:text}
 
@@ -205,7 +210,7 @@ input[type=text]:focus{outline:none;border-image-source:url("textures/minecraft/
 <div class="g"><button id="bCapeDownload" disabled>⬇ Télécharger le PNG</button><button id="bCapeRemove">🗑 Retirer la cape</button><button id="bCapeBack">RETOUR</button></div>
 </div>
 <div id="opts" class="p hid"><h2>PARAMÈTRES</h2><div id="optl"></div><label>Qualité <select id="oq"><option value="0">Basse</option><option value="1">Moyenne</option><option value="2">Haute</option></select></label>
-<div style="font-size:12px">Touches : ZQSD, Espace, Maj, Ctrl, E, T, A, V (parler), M (micro), C (zoom : maintiens et roule la molette pour régler), F5 (1<sup>re</sup> / 3<sup>e</sup> personne)</div><button class="back">RETOUR</button></div>
+<div style="font-size:12px">Touches : ZQSD · <b>Maj</b> = s’accroupir · <b>Ctrl</b> (ou Z deux fois) = sprinter · Espace = sauter (2× en créatif = voler) · E, T, A, V (parler), M (micro), C (zoom), <b>F3</b> = écran de débogage, F5 (1<sup>re</sup> / 3<sup>e</sup> personne)</div><button class="back">RETOUR</button></div>
 <div id="hot" class="p"></div>
 <div id="chat" class="p"><div id="log"></div><input type="text" id="ci" class="hid" maxlength="200" placeholder="Message ou /build" style="cursor:text"></div>
 <div id="inv" class="p hid" role="dialog" aria-label="Inventaire">
@@ -233,7 +238,7 @@ input[type=text]:focus{outline:none;border-image-source:url("textures/minecraft/
   <div id="invHelp">Clic : prendre / poser · Clic droit : prendre ou poser 1 · Hors des cases : jeter · Maj + clic dans un coffre : transfert rapide.</div>
 </div>
 <div id="bt" class="p hid"></div><div id="pp" class="p hid"></div><div id="brk"><i></i></div>
-<div id="cur"></div><div id="tip"></div><div id="xh"></div><div id="zhud"></div><div id="ztg"></div><div id="cmdout"></div>
+<div id="cur"></div><div id="tip"></div><div id="xh"></div><div id="zhud"></div><div id="ztg"></div><div id="cmdout"></div><div id="dbg"></div>
 <div id="eyes" class="p hid" style="inset:0;margin:auto;width:360px;height:fit-content;text-align:center"><h2>👁 PAUPIÈRES</h2><canvas id="pv3" class="pv" width="260" height="140"></canvas><label><input type="checkbox" id="eon"> Paupières activées (clignement)</label><div class="hint" style="margin:6px 0">Clique ou glisse sur le visage pour sélectionner les pixels de tes yeux. Quand tu clignes, ces pixels prennent la couleur des paupières.</div><canvas id="ezone" width="256" height="256" style="width:256px;height:256px;cursor:crosshair;touch-action:none;border:2px solid #666;border-radius:4px"></canvas><label>Couleur des paupières <input type="color" id="elc"></label><div><button id="epip">🎨 Pipette</button> <button id="eclr">Tout effacer</button></div><div id="epm" class="hint"></div><button class="back">RETOUR</button></div>
 <div id="voice" class="p hid"><h2 style="margin:0 0 6px">🎤 CHAT VOCAL</h2>
 <canvas id="pv4" class="pv" width="260" height="170"></canvas>
@@ -272,7 +277,7 @@ g.T=T;if(typeof module!=='undefined')module.exports=T})(typeof window!=='undefin
 <script type="module">
 import * as THREE from 'three';
 const $=s=>document.querySelector(s),S=1.8/32,cl=(v,a,b)=>Math.min(b,Math.max(a,v)),lp=(a,b,t)=>a+(b-a)*t,PI=Math.PI;
-const cfg=Object.assign({sens:1,dist:5,vol:.8,mus:.5,sfx:.8,q:1,zoom:4,zlvl:4},JSON.parse(localStorage.cfg||'{}'));
+const cfg=Object.assign({sens:1,dist:5,vol:.8,mus:.5,sfx:.8,q:1,zoom:4,zlvl:4,bob:1,fovFx:1},JSON.parse(localStorage.cfg||'{}'));
 // ---------- scène
 const R=new THREE.WebGLRenderer({canvas:$('#c'),antialias:true});R.shadowMap.enabled=true;R.shadowMap.type=THREE.PCFSoftShadowMap;R.outputColorSpace=THREE.SRGBColorSpace;
 const sc=new THREE.Scene(),cam=new THREE.PerspectiveCamera(65,1,.1,2500);sc.fog=new THREE.Fog(0xbfe0ff,200,900);
@@ -457,15 +462,18 @@ function mkHead(head,mb,mo,ml){head.traverse(o=>o.geometry&&o.geometry.dispose()
  const inner=new THREE.Mesh(new THREE.BoxGeometry(1,1,1),MDK);inner.visible=false;head.add(up,jaw,inner);return{up,jaw,inner}}
 function mouth(c,dt){const m=c.mh;if(!m)return;const t=c.st.dead?.5:(c.mo||0);c.mv+=(t-c.mv)*(1-Math.exp(-dt*(t>c.mv?28:12)));const o=c.mv<.03?0:c.mv*(c.amp||2.5);
  m.up.position.y=o*.5*S;m.jaw.position.y=-o*.5*S;m.inner.visible=o>.05;if(o>.05){m.inner.scale.set(7.4*S,(o+.15)*S,7.4*S);m.inner.position.y=c.ml*S}}
-function anim(c,dt,tm){blink(c,dt);mouth(c,dt);const s=c.st,m=c.m,K=r=>1-Math.exp(-dt*r),ez=(a,b,r)=>a+(b-a)*K(r);dt=Math.min(dt,.05);
+function anim(c,dt,tm,van){blink(c,dt);mouth(c,dt);const s=c.st,m=c.m,K=r=>1-Math.exp(-dt*r),ez=(a,b,r)=>a+(b-a)*K(r);dt=Math.min(dt,.05);
  if(!isFinite(c.ph))c.ph=0;if(s.land>0)s.land-=dt;
  const gl=s.gl?1:0,fl=s.fly&&!gl?1:0,air=s.air&&!gl&&!fl?1:0,sp=s.sp||0;
- m.amp=ez(m.amp,air||gl||fl?0:cl(sp/4.3,0,1),12);m.run=ez(m.run,sp>5.2?1:0,8);m.air=ez(m.air,air,10);m.up=ez(m.up,s.vy>0?1:0,10);
+ m.amp=ez(m.amp,van?van.amount:(air||gl||fl?0:cl(sp/4.3,0,1)),12);m.run=ez(m.run,sp>5.2?1:0,8);m.air=ez(m.air,air,10);m.up=ez(m.up,s.vy>0?1:0,10);
  m.gl=ez(m.gl,gl,6);m.fl=ez(m.fl,fl,8);m.sn=ez(m.sn,s.sn?1:0,12);m.ld=ez(m.ld,s.land>0?1:0,16);m.wg=ez(m.wg,c.wing?1:0,10);m.si=ez(m.si,s.si?1:0,10);
- c.ph+=sp*dt*(sp>5.2?1.45:1.9);
- const sw=Math.sin(c.ph),a=m.amp*(.6+.25*m.run),idle=1-cl(m.amp,0,1),br=Math.sin(tm*1.9),id=Math.sin(tm*1.4);
+ // Cycle de marche : « van » = valeurs officielles Minecraft (BipedModel.setRotationAngles).
+ // limbSwing avance de limbSwingAmount par tick ; jambes = cos(limbSwing×0,6662)×1,4×amount,
+ // bras = cos(limbSwing×0,6662 + PI)×2,0×amount×0,5 (donc 1/1,4 de l'amplitude des jambes).
+ if(van)c.ph=van.swing*.6662+PI/2;else c.ph+=sp*dt*(sp>5.2?1.45:1.9);
+ const sw=Math.sin(c.ph),a=van?m.amp*1.4:m.amp*(.6+.25*m.run),armK=van?(1/1.4):(.9+.2*m.run),idle=1-cl(m.amp,0,1),br=Math.sin(tm*1.9),id=Math.sin(tm*1.4);
  // marche / course : bras opposés aux jambes, torse qui tourne en sens inverse
- let lL=sw*a,lR=-lL,aLx=-lL*(.9+.2*m.run)+id*.05*idle,aRx=lL*(.9+.2*m.run)-id*.05*idle,aLz=.07+br*.025*idle+.1*m.run,aRz=-aLz,lLz=0,lRz=0,
+ let lL=sw*a,lR=-lL,aLx=-lL*armK+id*.05*idle,aRx=lL*armK-id*.05*idle,aLz=.07+br*.025*idle+.1*m.run,aRz=-aLz,lLz=0,lRz=0,
   lean=.05*m.amp+.14*m.run,twist=-sw*.16*a,roll=Math.sin(c.ph+.5)*.035*a+Math.sin(tm*.7)*.012*idle,crouch=0,headX=0,pitch=0;
  // accroupi
  crouch+=.13*m.sn;lean+=.4*m.sn;headX-=.2*m.sn;
@@ -850,8 +858,8 @@ function setVis(b){const o=b.o;b.g.visible=o.vis!==0||build;b.g.traverse(m=>{if(
   else if(m.userData.ghost){m.userData.ghost=0;m.material=mcMat[m.userData.pix||0]}
   m.material.needsUpdate=true;return}
  const mats=Array.isArray(m.material)?m.material:[m.material];mats.forEach(mt=>{if(!mt)return;mt.transparent=o.vis===0||m.userData.c===gl;mt.opacity=o.vis===0?.25:(m.userData.c===gl?.55:1);mt.needsUpdate=true})})}
-function applyObj(id,fast){const b=OB[id];if(!b)return;const{o,g}=b;g.position.set(...o.p);g.rotation.set(...o.r);g.scale.set(...o.s);g.updateMatrixWorld(true);b.bx=new THREE.Box3().setFromObject(g);b.colliders=[];if(o.type==='model')g.traverse(m=>{if(m.isMesh&&m.geometry?.attributes?.position){if(!m.geometry.boundingBox)m.geometry.computeBoundingBox();b.colliders.push({mesh:m,box:m.geometry.boundingBox.clone().applyMatrix4(m.matrixWorld)})}});if(!fast){setVis(b);setTex(g,o);signTxt(b)}}
-function rmObj(id){const b=OB[id];if(b){og.remove(b.g);delete OB[id];if(selId!=null&&String(selId)===String(id))selId=null;if(typeof jk!=='undefined'&&jk[id])jkStop(id,0)}}
+function applyObj(id,fast){const b=OB[id];if(!b)return;obVer++;const{o,g}=b;g.position.set(...o.p);g.rotation.set(...o.r);g.scale.set(...o.s);g.updateMatrixWorld(true);b.bx=new THREE.Box3().setFromObject(g);b.colliders=[];if(o.type==='model')g.traverse(m=>{if(m.isMesh&&m.geometry?.attributes?.position){if(!m.geometry.boundingBox)m.geometry.computeBoundingBox();b.colliders.push({mesh:m,box:m.geometry.boundingBox.clone().applyMatrix4(m.matrixWorld)})}});if(!fast){setVis(b);setTex(g,o);signTxt(b)}}
+function rmObj(id){obVer++;const b=OB[id];if(b){og.remove(b.g);delete OB[id];if(selId!=null&&String(selId)===String(id))selId=null;if(typeof jk!=='undefined'&&jk[id])jkStop(id,0)}}
 // ---------- réseau
 let ws=null,myId=0,mode='menu',paused=false,build=false,pendSel=0;const RM={};
 const send=o=>ws&&ws.readyState===1&&ws.send(JSON.stringify(o));
@@ -898,7 +906,7 @@ function localWS(){const K='cw_world';let W;try{W=JSON.parse(localStorage[K]||'n
   else{if(m.t==='upd'&&m.p&&'chOpen' in m.p)localChest=m.p.chOpen?m.id:null;fx(m);share(m)}}}}
 function applyWorld(m){T.h.set(m.h||[]);T.c.set(m.c||[]);for(const op of(m.ops||[]))T.apply(op);tdirty=1;TX=m.tex||{};Object.keys(OB).forEach(rmObj);Object.values(m.objs||{}).forEach(addObj);Object.keys(DROPS).forEach(removeDrop);Object.values(m.drops||{}).forEach(addDrop);if(Number.isFinite(+m.time))tOff=(((+m.time/24000-Date.now()/1000/480)%1)+1)%1}
 function onMsg(e){let m;try{m=JSON.parse(e.data)}catch(err){return}
-  if(m.t==='init'){myId=m.id;applyWorld(m);Object.values(m.players||{}).forEach(p=>p.id!==myId&&mkRemote(p));me.pos.set(m.pos?.x||0,m.pos?.y||0,m.pos?.z||0);mode='play';paused=false;showP(null);Object.values(m.jukes||{}).forEach(jukePlay);log('Connecté au monde. T = chat, /build = construction.');if(m.seed)setTimeout(()=>{if(mode==='play')mirrorSeed()},1200)}
+  if(m.t==='init'){myId=m.id;applyWorld(m);Object.values(m.players||{}).forEach(p=>p.id!==myId&&mkRemote(p));me.pos.set(m.pos?.x||0,m.pos?.y||0,m.pos?.z||0);mcTP();mode='play';paused=false;showP(null);Object.values(m.jukes||{}).forEach(jukePlay);log('Connecté au monde. T = chat, /build = construction.');if(m.seed)setTimeout(()=>{if(mode==='play')mirrorSeed()},1200)}
   else if(m.t==='join'&&m.p?.id!==myId){mkRemote(m.p);log(m.p.name+' a rejoint le monde.')}
   else if(m.t==='leave'&&RM[m.id]){sc.remove(RM[m.id].c.g);delete RM[m.id]}
   else if(m.t==='p'&&RM[m.id]&&m.s)RM[m.id].tg=m.s;
@@ -998,9 +1006,9 @@ O('commande_bloc',['oooooooo','okkkkkko','ogkgkkko','oggkgkko','ogkgkkko','okkkk
 O('lit',['........','.bb.....','.bbllllll','.bbllllll','pppppppp','p......p','p......p','........'].map(r=>r.slice(0,8)),{b:'#f5f3ee',l:'#c43a3a',p:'#6a4220'});
 O('panneau',['wwwwwwww','waaaaaaw','waaaaaaw','waaaaaaw','wwwwwwww','...ss...','...ss...','...ss...'],{w:'#5a3a18',a:'#dcc08a',s:'#6a4220'})}
 
-for(const k in EMO)if(!/^<img/.test(EMO[k])&&!/^<span class="mci"/.test(EMO[k]))EMO[k]=ICO(k,LF[k]?.[0]?.[7]||'#999');
-for(const k in IT)if(!/^<img/.test(IT[k][1])&&!/^<span class="mci"/.test(IT[k][1]))IT[k][1]=ICO(k,IT[k][3]||'#999');
-const FI=[['longue_vue', 'Longue-vue', '🔭', '#c9a24a', 'Maintiens le clic droit : zoom ×4.', 't'], ['boussole', 'Boussole', '🧭', '#c0392b', 'Clic droit : direction (N/S/E/O).', 't'], ['montre', 'Montre', '⌚', '#c5ccd3', 'Clic droit : heure du monde.', 't'], ['carte', 'Carte', '🗺️', '#e8d8a8', 'Clic droit : tes coordonnées.', 'm'], ['lampe_torche', 'Lampe torche', '🔦', '#f6e27a', 'Clic droit : allume/éteint le faisceau.', 't'], ['lanterne', 'Lanterne', '🏮', '#ff9a1f', 'Tenue en main, éclaire autour de toi.', 't'], ['grappin', 'Grappin', '🪝', '#9aa3ad', 'Clic droit : te tire vers le point visé (45 m).', 't'], ['perle_téléport', 'Perle de téléportation', '🔮', '#7a3fd0', 'Clic droit : te téléporte au point visé.', 'c'], ['jetpack', 'Jetpack', '🚀', '#d33', 'Clic droit : propulsion vers le haut.', 'c'], ['ressort', 'Ressort', '🪀', '#e8a12e', 'Clic droit : grand saut.', 't'], ['parachute', 'Parachute', '🪂', '#e8532e', 'Clic droit : chute ralentie 8 s.', 'm'], ['ballon', 'Ballon', '🎈', '#e84a5f', 'Clic droit : tu flottes 5 s.', 'm'], ['potion_soin', 'Potion de soin', '🧪', '#e33', 'Restaure toute la vie.', 'p'], ['potion_vitesse', 'Potion de vitesse', '💨', '#4af', 'Vitesse ×1,8 pendant 25 s.', 'p'], ['potion_saut', 'Potion de saut', '🦘', '#6c6', 'Super saut pendant 25 s.', 'p'], ['potion_gravité', 'Potion de gravité lunaire', '🌙', '#99c', 'Gravité faible pendant 30 s.', 'p'], ['pomme_dorée', 'Pomme dorée', '🍏', '#ffd23a', 'Redonne 5 cœurs.', 'p'], ['cristal_aube', 'Cristal d’aube', '🌅', '#ff9a5a', 'Clic droit : aube pour tout le monde.', 'c'], ['cristal_jour', 'Cristal de jour', '☀️', '#ffe066', 'Clic droit : plein jour pour tout le monde.', 'c'], ['cristal_nuit', 'Cristal de nuit', '🌑', '#334', 'Clic droit : minuit pour tout le monde.', 'c'], ['baguette_éclair', 'Baguette d’éclair', '🌩️', '#8ac', 'Clic droit : foudroie le point visé.', 'c'], ['canne_à_pêche', 'Canne à pêche', '🎣', '#6b4521', 'Clic droit : tente de pêcher un poisson.', 'm'], ['appareil_photo', 'Appareil photo', '📷', '#555', 'Clic droit : enregistre une capture PNG.', 't'], ['mégaphone', 'Mégaphone', '📢', '#e88', 'Clic droit : crie dans le chat.', 't'], ['sifflet', 'Sifflet', '📯', '#ddd', 'Clic droit : siffle.', 't'], ['cloche', 'Cloche', '🔔', '#e8c030', 'Clic droit : fait sonner la cloche.', 't'], ['tambour', 'Tambour', '🥁', '#c44', 'Clic droit : bam !', 'm'], ['harmonica', 'Harmonica', '🎼', '#bbb', 'Clic droit : joue une note.', 't'], ['loupe', 'Loupe', '🔍', '#9cf', 'Clic droit : nom et distance de l’objet visé.', 't'], ['règle', 'Règle', '📏', '#e8c070', 'Clic droit 2 fois : mesure une distance.', 'm'], ['dynamite', 'Dynamite', '🧨', '#d22', 'Clic droit : creuse un cratère.', 'c'], ['pelle_magique', 'Pelle magique', '⛏️', '#a8f', 'Clic droit : fait monter le terrain.', 'c'], ['niveleuse', 'Niveleuse', '🚜', '#e8a12e', 'Clic droit : aplatit le terrain visé.', 'c'], ['pousse_arbre', 'Pousse d’arbre', '🌱', '#4a4', 'Clic droit : plante un arbre.', 'm'], ['balise', 'Balise', '📍', '#e33', 'Clic droit : définit ton point de réapparition.', 't'], ['portail_retour', 'Portail de retour', '🌀', '#58f', 'Clic droit : retour à ta balise (ou au centre).', 'c'], ['radar', 'Radar', '📡', '#8c8', 'Clic droit : joueurs proches.', 't'], ['altimètre', 'Altimètre', '⛰️', '#a98', 'Clic droit : altitude actuelle.', 't'], ['minuteur', 'Minuteur', '⏲️', '#ccc', 'Clic droit : sonnerie dans 10 s.', 't'], ['dé', 'Dé', '🎲', '#fff', 'Clic droit : lance le dé (1 à 6).', 'm']];
+for(const k in EMO)if(!/^<img/.test(EMO[k]))EMO[k]=ICO(k,LF[k]?.[0]?.[7]||'#999');
+for(const k in IT)if(!/^<img/.test(IT[k][1]))IT[k][1]=ICO(k,IT[k][3]||'#999');
+const FI=[['longue_vue', 'Longue-vue', '🔭', '#c9a24a', 'Maintiens le clic droit : zoom ×4.', 't'], ['boussole', 'Boussole', '🧭', '#c0392b', 'Clic droit : direction (N/S/E/O).', 't'],['montre', 'Montre', '⌚', '#c5ccd3', 'Clic droit : heure du monde.', 't'],['carte', 'Carte', '🗺️', '#e8d8a8', 'Clic droit : tes coordonnées.', 'm'],['lampe_torche', 'Lampe torche', '🔦', '#f6e27a', 'Clic droit : allume/éteint le faisceau.', 't'],['lanterne', 'Lanterne', '🏮', '#ff9a1f', 'Tenue en main, éclaire autour de toi.', 't'],['perle_téléport', 'Perle de téléportation', '🔮', '#7a3fd0', 'Clic droit : te téléporte au point visé.', 'c'],['potion_soin', 'Potion de soin', '🧪', '#e33', 'Restaure toute la vie.', 'p'],['pomme_dorée', 'Pomme dorée', '🍏', '#ffd23a', 'Redonne 5 cœurs.', 'p'],['cristal_aube', 'Cristal d’aube', '🌅', '#ff9a5a', 'Clic droit : aube pour tout le monde.', 'c'],['cristal_jour', 'Cristal de jour', '☀️', '#ffe066', 'Clic droit : plein jour pour tout le monde.', 'c'],['cristal_nuit', 'Cristal de nuit', '🌑', '#334', 'Clic droit : minuit pour tout le monde.', 'c'],['baguette_éclair', 'Baguette d’éclair', '🌩️', '#8ac', 'Clic droit : foudroie le point visé.', 'c'],['canne_à_pêche', 'Canne à pêche', '🎣', '#6b4521', 'Clic droit : tente de pêcher un poisson.', 'm'],['appareil_photo', 'Appareil photo', '📷', '#555', 'Clic droit : enregistre une capture PNG.', 't'],['mégaphone', 'Mégaphone', '📢', '#e88', 'Clic droit : crie dans le chat.', 't'],['sifflet', 'Sifflet', '📯', '#ddd', 'Clic droit : siffle.', 't'],['cloche', 'Cloche', '🔔', '#e8c030', 'Clic droit : fait sonner la cloche.', 't'],['tambour', 'Tambour', '🥁', '#c44', 'Clic droit : bam !', 'm'],['harmonica', 'Harmonica', '🎼', '#bbb', 'Clic droit : joue une note.', 't'],['loupe', 'Loupe', '🔍', '#9cf', 'Clic droit : nom et distance de l’objet visé.', 't'],['règle', 'Règle', '📏', '#e8c070', 'Clic droit 2 fois : mesure une distance.', 'm'],['dynamite', 'Dynamite', '🧨', '#d22', 'Clic droit : creuse un cratère.', 'c'],['pelle_magique', 'Pelle magique', '⛏️', '#a8f', 'Clic droit : fait monter le terrain.', 'c'],['niveleuse', 'Niveleuse', '🚜', '#e8a12e', 'Clic droit : aplatit le terrain visé.', 'c'],['pousse_arbre', 'Pousse d’arbre', '🌱', '#4a4', 'Clic droit : plante un arbre.', 'm'],['balise', 'Balise', '📍', '#e33', 'Clic droit : définit ton point de réapparition.', 't'],['portail_retour', 'Portail de retour', '🌀', '#58f', 'Clic droit : retour à ta balise (ou au centre).', 'c'],['radar', 'Radar', '📡', '#8c8', 'Clic droit : joueurs proches.', 't'],['altimètre', 'Altimètre', '⛰️', '#a98', 'Clic droit : altitude actuelle.', 't'],['minuteur', 'Minuteur', '⏲️', '#ccc', 'Clic droit : sonnerie dans 10 s.', 't'],['dé', 'Dé', '🎲', '#fff', 'Clic droit : lance le dé (1 à 6).', 'm']];
 FI.forEach(([k,n,e,c,d])=>IT[k]=[n,e,/^(potion|pomme|dynamite|perle|pousse)/.test(k)?16:1,c,d]);
 let ccat='Tout';const FSET=new Set(FI.map(f=>f[0])),CREATIVE_FOOD=new Set([...FOOD.map(([k])=>k),'pomme_dorée']),
 // inventaire créatif : toutes les catégories de blocs Minecraft + les objets du jeu
@@ -1009,7 +1017,7 @@ CATS={'Tout':0,'🧱 Blocs':k=>MCI.has(k)||BSET.has(k),'🪑 Objets':k=>k[1]==='
 function ctabs(){const cats=gm==='creative'?CREATIVE_CATS:CATS;if(!cats[ccat])ccat='Tout';$('#ct').innerHTML=Object.keys(cats).map(c=>`<button type="button" data-c="${c}" title="${c}" class="mc-tab ${c===ccat?'on':''}">${c} <small>${Object.keys(IT).filter(k=>(gm!=='creative'||CREATIVE_ALLOWED.has(k))&&(!cats[c]||cats[c](k))).length}</small></button>`).join('')}
 
 if(!localStorage.gmv){localStorage.gmv=1;delete localStorage.gm}
-let fly=0,lastSp=0,gm=localStorage.gm||'survival',fp=0,tOff=0,lme=null,mx=innerWidth/2,my=innerHeight/2;
+let fly=0,lastSp=0,lastZTap=0,sprintTg=0,dbgOn=0,gm=localStorage.gm||'survival',fp=0,tOff=0,lme=null,mx=innerWidth/2,my=innerHeight/2;
 // ---------- zoom (touche C) : FOV en 1re personne, zoom vers le curseur en 3e
 const zMax=()=>cl(+cfg.zoom||4,1.5,12),zLvl=()=>cl(+cfg.zlvl||zMax(),1.2,zMax());
 let zCur=1;const _zv=new THREE.Vector3(),_za=new THREE.Vector3(),_zd=new THREE.Vector3(),zhud=$('#zhud'),ztg=$('#ztg');
@@ -1055,7 +1063,7 @@ function take(k,n){for(let i=0;i<36&&n>0;i++){const s=inv[i];if(s&&s.k===k){cons
 function trashCreativeItem(){if(gm!=='creative')return;const item=cur||inv[sel];if(!item)return;const label=itemDef(item)[0];if(cur)cur=null;else inv[sel]=null;log('🗑️ '+label+' supprimé de l’inventaire.');renderInv()}
 $('#trashBin').onclick=trashCreativeItem;$('#trashBin').oncontextmenu=e=>e.preventDefault();$('#trashBin').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();trashCreativeItem()}};
 function useItem(h,sh){if(typeof sh!=='boolean')sh=!!K.Shift;if(h&&h.id&&OB[h.id]&&h.h&&h.h.distance<14&&interact(h.id,sh))return;
- const s=inv[sel];if(!s)return;const d=itemDef(s);me.c.st.use=.4;if(s.k==='cd'){useCD(s,null,sh);return}if(s.k==='feu_artifice'){fw();if(me.c.st.air&&eq.some(q=>q?.k==='elytre'))me.vy=14}const dec=()=>{if(gm==='survival'){s.n--;if(!s.n)inv[sel]=null;renderInv()}};
+ const s=inv[sel];if(!s)return;const d=itemDef(s);me.c.st.use=.4;if(s.k==='cd'){useCD(s,null,sh);return}if(s.k==='feu_artifice'){fw();if(!mc.onGround&&eq.some(q=>q?.k==='elytre')){mc.vel.y=Math.max(mc.vel.y,.7);mc.onGround=false}}const dec=()=>{if(gm==='survival'){s.n--;if(!s.n)inv[sel]=null;renderInv()}};
  if(s.model?.mdl&&h&&h.p){const gq=gridPlace(h,'model');if(gq){pendSel=1;send({t:'add',o:{type:'model',mdl:s.model.mdl,fmt:s.model.fmt||'glb',name:s.model.name||'Modèle 3D',p:gq.p,r:[...(s.model.r||gq.r)],s:[...(s.model.s||[1,1,1])],tex:s.model.tex??null,tx:[...(s.model.tx||[1,0,0,0])]}});dec()}return}
  if(FN[s.k]){FN[s.k](dec,h||{});return}
  if(mcDef(s.k)&&h&&h.p){ // bloc Minecraft : pose sur la grille + orientation
@@ -1139,11 +1147,14 @@ function dmg(d,m){if(gm!=='survival'||dead||performance.now()<spawnProt)return 0
 function hurtFx(){const h=$('#hurt');h.style.transition='none';h.style.opacity=1;requestAnimationFrame(()=>requestAnimationFrame(()=>{h.style.transition='opacity .45s';h.style.opacity=0}))}
 // recul : toujours appliqué (direction envoyée par l'attaquant, sinon à l'opposé du joueur le plus proche)
 function knock(m,bl){let x=0,z=0;if(m&&Array.isArray(m.kb)){x=+m.kb[0]||0;z=+m.kb[1]||0}else{let q=null,bd=1e9;for(const id in RM){const p=RM[id].c.g.position,L=Math.hypot(p.x-me.pos.x,p.z-me.pos.z);if(L<bd){bd=L;q=p}}if(q){const dx=me.pos.x-q.x,dz=me.pos.z-q.z,L=Math.hypot(dx,dz)||1;x=dx/L*7;z=dz/L*7}}
- const L=Math.hypot(x,z);if(L>12){x*=12/L;z*=12/L}const k=bl?.3:1;kbv.x+=x*k;kbv.z+=z*k;me.vy=Math.max(me.vy,bl?2:5);me.c.st.air=1}
+ const L=Math.hypot(x,z);if(L>12){x*=12/L;z*=12/L}const k=bl?.3:1;
+ // Minecraft : le recul est une impulsion sur la vitesse (LivingEntity.takeKnockback). m/s -> blocs/tick.
+ mc.vel.x+=x*k/20;mc.vel.z+=z*k/20;mc.vel.y=Math.max(mc.vel.y,(bl?2:5)/20);mc.onGround=false;me.c.st.air=1;
+ mc.onHurt(Math.atan2(-z,-x)*180/Math.PI-mc.yaw*180/Math.PI)}
 function die(m){dead=1;deadT=0;me.v.set(0,0,0);me.c.st.sn=0;me.c.st.si=0;if(invOpen)toggleInv();if(chatOpen)openChat(false);cur=null;renderInv();pit=cl(pit,.2,1.2);
  const k=m&&m.from!=null&&RM[m.from]?RM[m.from].nm:null;$('#dk').textContent=k?'Tué par '+k:'Tu es mort…';log('☠ '+(k?'Tu as été tué par <b>'+String(k).replace(/</g,'&lt;')+'</b>.':'Tu es mort…'));
  critFx(me.c,1);unlock();$('#c').style.filter='grayscale(.85) brightness(.7) contrast(1.1)';setTimeout(()=>{if(dead)$('#dead').classList.remove('hid')},1500)}
-function respawn(){dead=0;deadT=0;hp=20;HOME?me.pos.copy(HOME):me.pos.set(0,T.get(0,0)+.1,0);me.vy=0;me.v.set(0,0,0);kbv.set(0,0,0);spawnProt=performance.now()+2500;me.c.st.dead=0;me.c.st.air=0;$('#dead').classList.add('hid');$('#c').style.filter=''}
+function respawn(){dead=0;deadT=0;hp=20;HOME?me.pos.copy(HOME):me.pos.set(0,T.get(0,0)+.1,0);me.vy=0;me.v.set(0,0,0);kbv.set(0,0,0);mcTP();spawnProt=performance.now()+2500;me.c.st.dead=0;me.c.st.air=0;$('#dead').classList.add('hid');$('#c').style.filter=''}
 $('#bResp').onclick=respawn;$('#bDMenu').onclick=()=>{$('#dead').classList.add('hid');quit()};
 // particules rouges + texte du coup critique
 function critFx(c,big){const o=c.g.position,n=big?70:36,p=new Float32Array(n*3),col=new Float32Array(n*3),v=[],cs=['#ff1a1a','#d40000','#ff5252','#a80000'].map(h=>new THREE.Color(h));
@@ -1397,6 +1408,9 @@ $('#bCapeRemove').onclick=()=>{if(setCape(null)){capeExportData=null;clearCapeCr
 $('#bCapeBack').onclick=()=>showP('cust');updateCapeSummary();drawCapeCrop();
 [0,1,2].forEach(i=>{const b=document.createElement('button');b.textContent='Skin '+(i+1);b.onclick=()=>setSkin(defSkin(i));$('#presets').append(b)});
 [['sens','Sensibilité caméra',.3,3,.1],['dist','Distance caméra',2,12,.5],['zoom','Zoom maximal (maintiens C)',1.5,12,.5],['vol','Volume',0,1,.05],['mus','Musique',0,1,.05],['sfx','Effets sonores',0,1,.05]].forEach(([k,n,a,b,s])=>{const l=document.createElement('label');l.innerHTML=n+`<input type=range min=${a} max=${b} step=${s} value=${cfg[k]}>`;l.firstChild.nextSibling.oninput=e=>{cfg[k]=+e.target.value;localStorage.cfg=JSON.stringify(cfg)};$('#optl').append(l)});
+ [['bob','Balancement de la caméra (pas)'],['fovFx','Champ de vision dynamique (sprint, effets)']].forEach(([k,n])=>{const l=document.createElement('label');
+  l.style.cssText='display:flex;gap:8px;align-items:center;justify-content:flex-start';l.innerHTML=`<input type=checkbox ${cfg[k]?'checked':''} style="width:auto;margin:0"> ${n}`;
+  l.firstChild.onchange=e=>{cfg[k]=e.target.checked?1:0;localStorage.cfg=JSON.stringify(cfg)};$('#optl').append(l)});
 $('#oq').value=cfg.q;$('#oq').onchange=e=>{cfg.q=+e.target.value;localStorage.cfg=JSON.stringify(cfg);quality()};
 const CMD={build:()=>{if(gm!=='creative')return log('Build : réservé au mode créatif.');build=!build;syncB();log('Mode Build '+(build?'activé':'désactivé'))},help:()=>log('/build · /time set day|noon|night|midnight|0-24000 · /gamemode creative|survival'),
 time:a=>{const M={day:1000,noon:6000,night:13000,midnight:18000,sunrise:23000,sunset:12000},v=M[a[1]]??+a[1];if(a[0]!=='set'||isNaN(v))return log('Usage : /time set day|noon|night|midnight|0-24000');send({t:'time',v});log('Heure réglée pour tout le monde.')},
@@ -1447,7 +1461,7 @@ let brk=null,ldown=0;const breakPending=new Set();
 function breakObject(id){const o=OB[id]?.o;if(!o||breakPending.has(id))return;breakPending.add(id);setTimeout(()=>breakPending.delete(id),2500);const items=o.type==='model'?[]:(gm==='creative'?[{k:mcItemKey(o.type),n:1}]:(DR[o.type]||[[mcItemKey(o.type),1]]).map(([k,n])=>({k,n})));send({t:'break',id,items,drop:gm==='survival'})}
 function startBreak(e){tryHit();const h=pick(e);me.c.st.atk=.35;me.atkc++;if(!h.id||!OB[h.id]||OB[h.id].o.vis===0||!h.h||h.h.distance>=14)return;if(gm==='creative'){breakObject(h.id);return}if(performance.now()-lastSw<350)return;lastSw=performance.now();brk={id:h.id,t:0,need:(mcBreakNeed(OB[h.id].o.type,inv[sel])??(HARD[OB[h.id].o.type]||1.5)/(inv[sel]?.k==='hache'?3:inv[sel]?.k==='pioche'?1.5:1))}}
 const _tri=new THREE.Triangle(),_ta=new THREE.Vector3(),_tb=new THREE.Vector3(),_tc=new THREE.Vector3(),_cp=new THREE.Vector3(),_cn=new THREE.Vector3(),_delta=new THREE.Vector3(),_center=new THREE.Vector3();
-function collideModelMeshes(){let ground=T.get(me.pos.x,me.pos.z);const radius=.29,offsets=[.22,.88,1.54],maxTriangles=6000;
+function collideModelMeshes(){let ground=-1/0;const radius=.29,offsets=[.22,.88,1.54],maxTriangles=6000;
  for(const id in OB){const b=OB[id],o=b.o;if(o.type!=='model'||o.tch===0||!b.colliders?.length)continue;
   for(const col of b.colliders){const mesh=col.mesh,geo=mesh.geometry,pos=geo.attributes.position,idx=geo.index,B=col.box;if(!pos)continue;let count=idx?idx.count/3:pos.count/3;if(count<1)continue;const step=Math.max(1,Math.ceil(count/maxTriangles));
    for(let s=0;s<offsets.length;s++){_center.set(me.pos.x,me.pos.y+offsets[s],me.pos.z);if(_center.x+radius<B.min.x||_center.x-radius>B.max.x||_center.y+radius<B.min.y||_center.y-radius>B.max.y||_center.z+radius<B.min.z||_center.z-radius>B.max.z)continue;
@@ -1499,9 +1513,11 @@ onkeydown=e=>{const ae=document.activeElement;
  if(k==='t'){e.preventDefault();openChat(true)}
  if(k==='m'&&!e.repeat)toggleMute();
  if(k==='b'&&!e.repeat&&!fly&&!me.c.st.air)me.c.st.si=me.c.st.si?0:1;
+ if(k==='z'&&!e.repeat&&!K.Control){const n=performance.now();if(n-lastZTap<300){sprintTg=sprintTg?0:1;log(sprintTg?'🏃 Sprint maintenu':'🚶 Sprint arrêté')}lastZTap=n}
+ if(k==='F3'){e.preventDefault();dbgOn=dbgOn?0:1;$('#dbg').classList.toggle('on',!!dbgOn)}
  if(k==='a'){const s=inv[sel];if(s){log('Objet jeté : '+itemDef(s)[0]);dropSelected(1)}}
  if(k>='1'&&k<='9'){sel=k-1;renderInv()}
- if(k===' '&&!e.repeat&&gm==='creative'){const n=performance.now();if(n-lastSp<300){fly=fly?0:1;me.vy=0}lastSp=n}
+ if(k===' '&&!e.repeat&&gm==='creative'){const n=performance.now();if(n-lastSp<300){fly=fly?0:1;mc.vel.y=0;me.vy=0}lastSp=n}
  if(k==='F5'){e.preventDefault();fp=!fp;fp?$('#c').requestPointerLock?.():unlock()}
  if(build){const O=selId&&OB[selId]?.o,st=e.shiftKey?1:.25;if(k==='Delete'||k==='Backspace'){e.preventDefault();if(gm==='creative')breakObject(selId);else delSel();return}
   if(O){const p=[...O.p];let ch=1;if(k==='ArrowLeft')p[0]-=st;else if(k==='ArrowRight')p[0]+=st;else if(k==='ArrowUp')p[2]-=st;else if(k==='ArrowDown')p[2]+=st;else if(k==='PageUp')p[1]+=st;else if(k==='PageDown')p[1]-=st;else ch=0;if(ch){send({t:'upd',id:selId,p:{p}});e.preventDefault()}}}
@@ -1531,7 +1547,7 @@ onwheel=e=>{if(!active())return;const d=Math.sign(e.deltaY);
  if(e.altKey){cfg.dist=cl(cfg.dist+d,2,12);return}sel=(sel+d+9)%9;renderInv()};
 function resize(){R.setSize(innerWidth,innerHeight,false);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix()}onresize=resize;resize();
 // ---------- v8 : pose sur grille (comme Minecraft) + objets fonctionnels
-let SPM=1,JPM=1,GRM=1,HOME=null,RUL=null,fOn=0,_ac=null;
+let HOME=null,RUL=null,fOn=0,_ac=null;
 function gridPlace(h,type){if(!h||!h.p)return null;const A=Math.abs,n=new THREE.Vector3(0,1,0),o=h.h&&(!h.g||h.h.distance<h.g.d);let x,y,z;
  if(o&&h.h.face){n.copy(h.h.face.normal).transformDirection(h.h.object.matrixWorld);const ax=A(n.x)>A(n.y)&&A(n.x)>A(n.z)?'x':A(n.z)>A(n.y)?'z':'y',sg=Math.sign(n[ax]);n.set(0,0,0);n[ax]=sg;x=Math.floor(h.p.x+n.x*.01);y=Math.floor(h.p.y+n.y*.01);z=Math.floor(h.p.z+n.z*.01)}
  else{x=Math.floor(h.p.x);z=Math.floor(h.p.z);y=Math.round(T.get(x+.5,z+.5))}
@@ -1547,13 +1563,8 @@ const FN={longue_vue:()=>{},lanterne:()=>log('🏮 Tenue en main, elle éclaire 
 boussole:()=>{const x=-Math.sin(yaw),z=-Math.cos(yaw);log('🧭 Tu regardes vers le '+(z<-.707?'Nord':z>.707?'Sud':x>0?'Est':'Ouest'))},
 montre:()=>log('⌚ Il est '+hhmm()),carte:()=>log('🗺️ X '+me.pos.x.toFixed(0)+' · Z '+me.pos.z.toFixed(0)+' · altitude '+me.pos.y.toFixed(1)),
 lampe_torche:()=>{fOn^=1;log('🔦 Lampe '+(fOn?'allumée':'éteinte'));beep(1400,.05,'square')},
-grappin:(d,h)=>{if(!h.p)return;const v=h.p.clone().sub(me.pos);if(v.length()>45)return log('🪝 Trop loin (45 m max).');kbv.addScaledVector(v.normalize(),22);me.vy=Math.max(me.vy,9);air()},
-perle_téléport:(d,h)=>{if(!h.p)return;me.pos.copy(h.p);me.pos.y+=.3;me.vy=0;beep(300,.3);d()},
-jetpack:()=>{me.vy=Math.max(me.vy,13);air();beep(120,.2,'sawtooth')},ressort:()=>{me.vy=20;air()},
-parachute:()=>{log('🪂 Parachute ouvert (8 s)');T8(8,()=>me.vy=Math.max(me.vy,-2.5))},ballon:()=>{log('🎈 Tu flottes (5 s)');air();T8(5,()=>{me.vy=Math.max(me.vy,2.5)})},
-potion_soin:d=>{hp=20;log('🧪 Vie restaurée');d()},potion_vitesse:d=>{buff('💨 Vitesse ×1,8 (25 s)',()=>SPM=1.8,()=>SPM=1,25);d()},
-potion_saut:d=>{buff('🦘 Super saut (25 s)',()=>JPM=1.8,()=>JPM=1,25);d()},potion_gravité:d=>{buff('🌙 Gravité lunaire (30 s)',()=>GRM=.3,()=>GRM=1,30);d()},
-pomme_dorée:d=>{hp=Math.min(20,hp+10);log('🍏 +5 cœurs');d()},
+perle_téléport:(d,h)=>{if(!h.p)return;me.pos.copy(h.p);me.pos.y+=.3;me.vy=0;mcTP();beep(300,.3);d()},
+potion_soin:d=>{hp=20;log('🧪 Vie restaurée');d()},pomme_dorée:d=>{hp=Math.min(20,hp+10);log('🍏 +5 cœurs');d()},
 cristal_aube:()=>{send({t:'time',v:23000});log('🌅 Aube')},cristal_jour:()=>{send({t:'time',v:6000});log('☀️ Plein jour')},cristal_nuit:()=>{send({t:'time',v:18000});log('🌑 Minuit')},
 baguette_éclair:(d,h)=>{const p=h.p;if(!p)return;const pts=[];let x=p.x,z=p.z;for(let i=0;i<=10;i++){pts.push(new THREE.Vector3(x,p.y+i*4,z));x+=(Math.random()-.5)*2;z+=(Math.random()-.5)*2}
  const L=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:0xcfe8ff,fog:false})),pl=new THREE.PointLight(0xaaccff,400,60);pl.position.set(p.x,p.y+3,p.z);sc.add(L,pl);beep(70,.6,'sawtooth');setTimeout(()=>sc.remove(L,pl),220)},
@@ -1565,35 +1576,219 @@ loupe:(d,h)=>{const o=h.id&&OB[h.id]?.o;log(o?'🔍 '+nm(o.type)+' — '+h.h.dis
 règle:(d,h)=>{if(!h.p)return;if(!RUL){RUL=h.p.clone();log('📏 Point A posé.')}else{log('📏 Distance : '+RUL.distanceTo(h.p).toFixed(2)+' m');RUL=null}},
 dynamite:(d,h)=>{if(!h.p)return;ops(h.p,'lower',8,1.6,6);beep(55,.7,'sawtooth');d()},pelle_magique:(d,h)=>{if(h.p)ops(h.p,'raise',6,1,5)},niveleuse:(d,h)=>{if(h.p)ops(h.p,'flatten',3,1,6,h.p.y)},
 pousse_arbre:(d,h)=>{const g=gridPlace(h,'petit_arbre');if(g){send({t:'add',o:{type:'petit_arbre',p:g.p,r:g.r,s:[1,1,1],tex:null,tx:[1,0,0,0]}});d()}},
-balise:()=>{HOME=me.pos.clone();log('📍 Point de réapparition défini.')},portail_retour:()=>{me.pos.copy(HOME||new THREE.Vector3(0,T.get(0,0)+.1,0));me.vy=0;beep(250,.4)},
+balise:()=>{HOME=me.pos.clone();log('📍 Point de réapparition défini.')},portail_retour:()=>{me.pos.copy(HOME||new THREE.Vector3(0,T.get(0,0)+.1,0));me.vy=0;mcTP();beep(250,.4)},
 radar:()=>{const l=Object.values(RM).map(r=>{const p=r.c.g.position;return String(r.nm).replace(/</g,'&lt;')+' '+Math.round(Math.hypot(p.x-me.pos.x,p.z-me.pos.z))+' m'});log('📡 '+(l.length?l.join(' · '):'Aucun joueur détecté.'))},
 altimètre:()=>log('⛰️ Altitude : '+me.pos.y.toFixed(1)+' m'),minuteur:()=>{log('⏲️ 10 secondes…');setTimeout(()=>{log('⏲️ Terminé !');beep(1200,.5)},1e4)},dé:()=>log('🎲 '+(1+Math.random()*6|0))};
 const FL=new THREE.SpotLight(0xfff0c0,0,45,.5,.4,1),LT=new THREE.PointLight(0xffc070,0,14,1.5);sc.add(FL,FL.target,LT);
 ticks.push(dt=>{const k=inv[sel]?.k;FL.intensity=fOn&&k==='lampe_torche'?120:0;LT.intensity=k==='lanterne'?30:0;
  if(FL.intensity){const d=new THREE.Vector3();cam.getWorldDirection(d);FL.position.copy(cam.position);FL.target.position.copy(cam.position).addScaledVector(d,10)}
- LT.position.set(me.pos.x,me.pos.y+1.8,me.pos.z);const zt=K.c&&active()?zLvl():1;zCur=lp(zCur,zt,1-Math.exp(-dt*14));if(Math.abs(zCur-zt)<.004)zCur=zt;const z=(k==='longue_vue'&&rdown&&active()?16:65)/zCur;if(Math.abs(cam.fov-z)>.05){cam.fov=lp(cam.fov,z,.35);cam.updateProjectionMatrix()}});
+ LT.position.set(me.pos.x,me.pos.y+1.8,me.pos.z);const zt=K.c&&active()?zLvl():1;zCur=lp(zCur,zt,1-Math.exp(-dt*14));if(Math.abs(zCur-zt)<.004)zCur=zt;
+ const z=(k==='longue_vue'&&rdown&&active()?16:(cfg.fovFx?mc.getFov(alpha):70))/zCur;if(Math.abs(cam.fov-z)>.05){cam.fov=lp(cam.fov,z,.35);cam.updateProjectionMatrix()}});
+
+/* == MC-PHYSIQUE:DEBUT =====================================================
+ * Physique / caméra / animation du joueur : reproduction exacte de Minecraft
+ * Java. Cette section est autonome (elle ne dépend que de mc/playerphysics.js,
+ * de mcId(), de T et de OB) : tools/test-player-physics.mjs l'extrait et la
+ * teste sans navigateur.
+ * ======================================================================== */
+// ══════════════════════════════════════════════════════════════════════════
+//  PHYSIQUE MINECRAFT  (mc/playerphysics.js)
+//  Le monde du jeu (heightmap + blocs posés) est exposé au moteur de
+//  physique sous la forme d'un « world » Minecraft : boîtes de collision,
+//  glissance, liquides, échelles. La simulation tourne à 20 ticks par
+//  seconde (comme le jeu Java) et le rendu est interpolé entre deux ticks.
+// ══════════════════════════════════════════════════════════════════════════
+const MCSTEP = MCPhys.MC.TICK_DT;              // 0,05 s — 20 ticks par seconde
+// Glissance (Block.slipperiness) : tout ce qui n'est pas listé vaut 0,6.
+const SLIP = {ice:.98, packed_ice:.98, frosted_ice:.98, blue_ice:.989, slime_block:.8};
+let obVer = 0;                                 // change dès qu'un objet bouge / apparaît
+/* Index spatial : colonne « cx,cz » → boîtes des blocs & objets posés. */
+const MW = {ver:-1, idx:null};
+function mwBuild () {
+  const m = new Map();
+  for (const id in OB) {
+    const b = OB[id], o = b.o;
+    if (o.tch === 0) continue;                        // objet traversable
+    const x = b.bx; if (!x || x.isEmpty()) continue;
+    const bid = mcId(o.type), d = b.g.userData.def, solid = d ? !!d.solid : 1;
+    const water = bid === 'water', lava = bid === 'lava';
+    const climb = bid === 'ladder' || bid === 'vine' || bid === 'scaffolding' ||
+                  bid === 'weeping_vines' || bid === 'twisting_vines' || bid === 'cave_vines';
+    if (!solid && !water && !lava && !climb) continue;
+    const e = {
+      minX:x.min.x, minY:x.min.y, minZ:x.min.z, maxX:x.max.x, maxY:x.max.y, maxZ:x.max.z,
+      slip:SLIP[bid] || .6, solid:solid ? 1 : 0, water:water ? 1 : 0, lava:lava ? 1 : 0,
+      climb:climb ? 1 : 0, bouncy:bid === 'slime_block' ? 1 : 0, id:bid || o.type,
+    };
+    for (let cx = Math.floor(x.min.x + 1e-4); cx <= Math.floor(x.max.x - 1e-4); cx++)
+    for (let cz = Math.floor(x.min.z + 1e-4); cz <= Math.floor(x.max.z - 1e-4); cz++) {
+      const k = cx + ',' + cz; let a = m.get(k); if (!a) m.set(k, a = []); a.push(e);
+    }
+  }
+  MW.idx = m; MW.ver = obVer;
+}
+function mwReady () { if (MW.ver !== obVer) mwBuild(); }
+/* Bloc (ou objet) présent au centre de la case entière (x, y, z). */
+function mwAt (x, y, z) {
+  mwReady();
+  const a = MW.idx && MW.idx.get(x + ',' + z); if (!a) return null;
+  const px = x + .5, py = y + .5, pz = z + .5;
+  for (let i = 0; i < a.length; i++) {
+    const e = a[i];
+    if (px > e.minX && px < e.maxX && py > e.minY && py < e.maxY && pz > e.minZ && pz < e.maxZ) return e;
+  }
+  return null;
+}
+const PW = {
+  /* Boîtes solides qui touchent la boîte demandée (VoxelShape). */
+  getCollisionBoxes (q) {
+    mwReady();
+    const out = [], idx = MW.idx;
+    const cx0 = Math.floor(q.minX), cx1 = Math.floor(q.maxX - 1e-9);
+    const cz0 = Math.floor(q.minZ), cz1 = Math.floor(q.maxZ - 1e-9);
+    for (let cx = cx0; cx <= cx1; cx++) for (let cz = cz0; cz <= cz1; cz++) {
+      const a = idx.get(cx + ',' + cz);
+      if (a) for (let i = 0; i < a.length; i++) {
+        const e = a[i];
+        if (e.solid && e.maxX > q.minX && e.minX < q.maxX && e.maxY > q.minY &&
+            e.minY < q.maxY && e.maxZ > q.minZ && e.minZ < q.maxZ) out.push(e);
+      }
+      /* Terrain : heightmap lisse. Sous la surface, blocs pleins ; le bloc
+       * du dessus est coupé à la hauteur exacte (comme une dalle partielle)
+       * pour que le joueur marche vraiment sur le sol visible. */
+      const h = T.get(cx + .5, cz + .5), top = Math.floor(h);
+      if (h > 0) {
+        const y0 = Math.max(top - 8, Math.min(top, Math.floor(q.minY)));
+        for (let by = y0; by <= top; by++) {
+          const y1 = by < top ? by + 1 : Math.min(by + 1, h);
+          if (y1 > q.minY && by < q.maxY)
+            out.push({minX:cx, minY:by, minZ:cz, maxX:cx + 1, maxY:y1, maxZ:cz + 1, slip:.6, solid:1, terrain:1});
+        }
+      }
+    }
+    return out;
+  },
+  /* Hauteur du terrain (sol continu). */
+  groundHeight (x, z) { return T.get(x, z); },
+  isBouncy (x, y, z) { const e = mwAt(x, y, z); return !!(e && e.bouncy); },
+  isClimbable (x, y, z) { const e = mwAt(x, y, z); return !!(e && e.climb); },
+  getSlipperiness (x, y, z) { const e = mwAt(x, y, z); return e ? e.slip : .6; },
+  getFluid (bb) {
+    mwReady();
+    let water = 0, lava = 0, h = 0;
+    const cx0 = Math.floor(bb.minX), cx1 = Math.floor(bb.maxX - 1e-9);
+    const cz0 = Math.floor(bb.minZ), cz1 = Math.floor(bb.maxZ - 1e-9);
+    for (let cx = cx0; cx <= cx1; cx++) for (let cz = cz0; cz <= cz1; cz++) {
+      const a = MW.idx.get(cx + ',' + cz); if (!a) continue;
+      for (let i = 0; i < a.length; i++) {
+        const e = a[i]; if (!e.water && !e.lava) continue;
+        if (e.maxX > bb.minX && e.minX < bb.maxX && e.maxY > bb.minY &&
+            e.minY < bb.maxY && e.maxZ > bb.minZ && e.minZ < bb.maxZ) {
+          if (e.water) water = 1; else lava = 1;
+          const hh = e.maxY - bb.minY; if (hh > h) h = hh;
+        }
+      }
+    }
+    return {water, lava, height:h};
+  },
+};
+/* Le joueur Minecraft : état, entrées, physique, caméra, animation. */
+const mc = new MCPhys.MCPlayer();
+mc.world = PW;
+/* Recale la physique sur me.pos (téléportation, réapparition, connexion). */
+function mcTP () {
+  mc.pos.x = me.pos.x; mc.pos.y = me.pos.y; mc.pos.z = me.pos.z;
+  mc.prevPos.x = me.pos.x; mc.prevPos.y = me.pos.y; mc.prevPos.z = me.pos.z;
+  mc.vel.x = mc.vel.y = mc.vel.z = 0; mc.fallDistance = mc.landedDistance = 0; mc.onGround = false;
+}
+/* Dégâts de chute : Minecraft retire 1 ❤ par bloc au-delà de 3 blocs. */
+function fallDmg (d) {
+  if (gm !== 'survival' || dead || performance.now() < spawnProt) return;
+  const n = Math.ceil(d - 3); if (n <= 0) return;
+  hp = Math.max(0, hp - n); hurtFx(); mc.onHurt(0);
+  if (hp <= 0) die(null); else log('🦶 Chute : −' + n + ' ❤');
+}
+/* == MC-PHYSIQUE:FIN */
+
+/* Écran de débogage (F3). */
+let dbgT = 0, fpsS = 60;
+function updDbg (alpha) {
+  const s = mc.stats, sp = Math.hypot(mc.vel.x, mc.vel.z);
+  const O = (b, o, n) => b ? o : n;
+  $('#dbg').innerHTML =
+    `<b>MINECRAFT ${MCPhys.MC ? '1.21' : ''} — PHYSIQUE EXACTE</b>\n` +
+    `XYZ       ${mc.pos.x.toFixed(3)} / ${mc.pos.y.toFixed(3)} / ${mc.pos.z.toFixed(3)}\n` +
+    `Bloc      ${Math.floor(mc.pos.x)} ${Math.floor(mc.pos.y)} ${Math.floor(mc.pos.z)}\n` +
+    `Vitesse   ${(sp * 20).toFixed(3)} m/s  (${sp.toFixed(4)} b/t)\n` +
+    `Vertical  ${(mc.vel.y * 20).toFixed(3)} m/s  (${mc.vel.y.toFixed(4)} b/t)\n` +
+    `Sol ${O(mc.onGround, 'oui ', 'non ')} · Sprint ${O(mc.isSprinting, 'oui ', 'non ')} · ` +
+    `Accroupi ${O(mc.isSneaking, 'oui ', 'non ')} · Vol ${O(mc.isFlying, 'oui', 'non')}\n` +
+    `Glissance ${s.slipperiness.toFixed(3)} · Accél. ${s.acceleration.toFixed(4)} · Inertie ${s.friction.toFixed(4)}\n` +
+    `Attribut  ${s.speedAttribute.toFixed(4)} (marche 0,1000 · sprint 0,1300)\n` +
+    `Tick ${s.tick} · ${fpsS.toFixed(0)} img/s · pose ${mc.pose} · eau ${O(mc.isInWater, 'oui', 'non')}\n` +
+    `FOV       ${cam.fov.toFixed(1)}° (×${(mc.getFov(alpha) / 70).toFixed(3)})\n` +
+    `Membres   limbSwing ${mc.limbSwing.toFixed(2)} · amount ${mc.limbSwingAmount.toFixed(3)}\n` +
+    `Caméra    yaw ${(((mc.yaw * 180 / Math.PI) % 360 + 360) % 360).toFixed(1)}° · bobbing ${mc.cameraYaw.toFixed(4)}\n` +
+    `Chute     ${mc.fallDistance.toFixed(2)} bloc(s)`;
+}
 // ---------- boucle
-let last=performance.now(),sendT=0;
+let last=performance.now(),sendT=0,mcAcc=0,alpha=0;
 function frame(now){requestAnimationFrame(frame);const dt=Math.min(.05,(now-last)/1000);last=now;const tm=now/1000;
  if(tdirty)refT();tick(dt);voiceTick(now);if(dead)deadT+=dt;const st=me.c.st;
- if(active()){const f=(K.z?1:0)-(K.s?1:0),r=(K.d?1:0)-(K.q?1:0),fw=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw)),rt=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw)),dir=fw.multiplyScalar(f).addScaledVector(rt,r);if(st.si)dir.set(0,0,0);
-  if(st.si&&(f||r||K[' ']||fly||st.air))st.si=0;
-  st.sn=K.Control&&!fly&&!st.si?1:0;const spd=(st.sn?1.8:K.Shift?7:4.3)*(fly?2.2:1)*SPM;if(dir.lengthSq())dir.normalize().multiplyScalar(spd);me.v.lerp(dir,1-Math.exp(-dt*(st.air?3:10)));
-  if(K[' ']&&!st.air&&!fly){me.vy=7.5*JPM;st.air=1}}else{me.v.lerp(new THREE.Vector3(),1-Math.exp(-dt*10));st.sn=0}
- st.fly=fly?1:0;st.dead=dead;me.c.wing=eq.some(q=>q?.k==='elytre')?1:0;st.gl=active()&&st.air&&!fly&&K[' ']&&me.c.wing?1:0;
- if(st.gl){me.vy=Math.max(me.vy,-2);me.v.x-=Math.sin(yaw)*dt*14;me.v.z-=Math.cos(yaw)*dt*14;const q=Math.hypot(me.v.x,me.v.z);if(q>22)me.v.multiplyScalar(22/q)}me.pos.addScaledVector(me.v,dt);if(kbv.lengthSq()>.0004){me.pos.addScaledVector(kbv,dt);kbv.multiplyScalar(Math.exp(-dt*(st.air?1.5:7)))}else kbv.set(0,0,0);if(fly)me.vy=active()?((K[' ']?7:0)-(K.Control?7:0)):0;else me.vy-=22*dt*GRM;me.pos.y+=me.vy*dt;const gh=mode==='play'?collide():T.get(me.pos.x,me.pos.z);if(fly&&me.vy<0&&me.pos.y<=gh)fly=0;
- if(me.pos.y<=gh){if(st.air&&me.vy<-3)st.land=.25;me.pos.y=gh;me.vy=0;st.air=0}else if(me.pos.y>gh+.1)st.air=fly?0:1;
- st.sp=Math.hypot(me.v.x,me.v.z);st.vy=me.vy;if(st.sp>.3)me.ry=turn(me.ry,Math.atan2(me.v.x,me.v.z),1-Math.exp(-dt*14));if(fp&&mode==='play'&&!dead)me.ry=turn(me.ry,yaw+PI,1-Math.exp(-dt*14));
- if(!st.use&&0){}if(st.use>0){st.use-=dt;if(st.use<=0)st.use=0}
- me.c.g.position.copy(me.pos);me.c.g.rotation.y=me.ry;anim(me.c,dt,tm);if(!dead)lookHead(me.c,yaw+PI,pit,me.ry);
+ // ════════════════════════════════════════════════════════════════════════
+ //  MOUVEMENT — physique Minecraft : 20 ticks/s, rendu interpolé
+ // ════════════════════════════════════════════════════════════════════════
+ const A=active(),SIT=st.si;
+ mc.dead=!!dead;if(dead)mc.deathTime=deadT*20;
+ if(A){
+  // Touches « vanilla » : Maj = s'accroupir, Ctrl = sprinter, Z deux fois = sprinter
+  mc.input.forward=!!K.z&&!SIT;mc.input.back=!!K.s&&!SIT;mc.input.left=!!K.q&&!SIT;mc.input.right=!!K.d&&!SIT;
+  mc.input.jump=!!K[' ']&&!SIT;mc.input.sneak=!!K.Shift&&!SIT;mc.input.sprint=(!!K.Control||sprintTg)&&!SIT;
+  mc.yaw=PI-yaw;mc.pitch=pit;          // repère caméra du jeu (yaw 0 = −Z) → Minecraft (yaw 0 = +Z)
+  if(SIT){mc.vel.x=0;mc.vel.z=0}
+  if(K.z||K.s||K.q||K.d||K[' ']||fly||!mc.onGround)st.si=0;   // une touche et on se relève
+ }else{mc.input.forward=mc.input.back=mc.input.left=mc.input.right=mc.input.jump=mc.input.sneak=mc.input.sprint=0}
+ me.c.wing=eq.some(q=>q?.k==='elytre')?1:0;
+ st.gl=!!(A&&!fly&&!mc.onGround&&K[' ']&&me.c.wing);       // vol plané : élytres + Espace en l'air
+ mc.isFlying=!!fly;mc.isGliding=!!st.gl;mc.abilities.allowFlying=gm==='creative'?1:0;
+ if(sprintTg&&(!mc.input.forward||mc.isSneaking||mc.collidedHorizontally||fly||mc.isInWater))sprintTg=0;
+ // --- simulation : exactement 20 ticks par seconde, durée fixe (0,05 s) ---
+ mcAcc+=dt;let nT=0;while(mcAcc>=MCSTEP&&nT<5){mcAcc-=MCSTEP;mc.tick(PW);nT++}
+ alpha=cl(mcAcc/MCSTEP,0,1);
+ // --- recopie vers l'état du jeu (compatibilité : m/s) ---
+ me.v.set(mc.vel.x*20,mc.vel.y*20,mc.vel.z*20);me.vy=mc.vel.y*20;st.vy=me.vy;
+ st.air=mc.onGround?0:1;st.sn=mc.isSneaking?1:0;st.sp=mc.stats.moveSpeed;st.fly=fly?1:0;st.dead=dead;
+ if(mc.landedDistance>0){if(mc.landedDistance>.5)st.land=.25;fallDmg(mc.landedDistance);mc.landedDistance=0}
+ // (le vol créatif ne se coupe pas au contact du sol : comme dans Minecraft, on le
+ //  rallume / éteint avec un double appui sur Espace)
+ if(st.use>0){st.use-=dt;if(st.use<=0)st.use=0}
+ // --- correction par les maillages 3D importés (triangles), comme avant ---
+ me.pos.set(mc.pos.x,mc.pos.y,mc.pos.z);
+ const gmY=collideModelMeshes();
+ if(me.pos.y<gmY){if(mc.vel.y<0)mc.vel.y=0;me.pos.y=gmY}
+ mc.pos.x=me.pos.x;mc.pos.y=me.pos.y;mc.pos.z=me.pos.z;
+ if(st.sp>.3)me.ry=turn(me.ry,Math.atan2(mc.vel.x,mc.vel.z),1-Math.exp(-dt*14));
+ if(fp&&mode==='play'&&!dead)me.ry=turn(me.ry,yaw+PI,1-Math.exp(-dt*14));
+ // --- rendu : position interpolée entre le tick précédent et le tick courant ---
+ const RP=mc.renderPos(alpha),ML=mc.renderLimb(alpha);me.pos.set(RP.x,RP.y,RP.z);
+ me.c.g.position.copy(me.pos);me.c.g.rotation.y=me.ry;
+ anim(me.c,dt,tm,ML);if(!dead)lookHead(me.c,yaw+PI,pit,me.ry);
  for(const id in RM){const r=RM[id],s=r.tg,k=1-Math.exp(-dt*12),g=r.c.g;g.position.x=lp(g.position.x,s.x,k);g.position.y=lp(g.position.y,s.y,k);g.position.z=lp(g.position.z,s.z,k);g.rotation.y=turn(g.rotation.y,s.ry,k);
-  Object.assign(r.c.st,{sp:s.sp||0,sn:s.sn||0,si:s.si||0,air:s.air||0,vy:s.vy||0,use:s.use||0,fly:s.fy||0,gl:s.gl||0,dead:s.dd||0});r.c.wing=s.el||0;r.c.mo=r.talk>now?cl((r.lvl-.01)*10,0,1):0;if(s.atk!==r.la){if(r.la!=null&&s.atk!=null)r.c.st.atk=.35;r.la=s.atk}anim(r.c,dt,tm);if(s.hy!=null&&!s.dd)lookHead(r.c,s.hy,s.hp,g.rotation.y)}
+  Object.assign(r.c.st,{sp:s.sp||0,sn:s.sn||0,si:s.si||0,air:s.air||0,vy:s.vy||0,use:s.use||0,fly:s.fy||0,gl:s.gl||0,dead:s.dd||0});r.c.wing=s.el||0;r.c.mo=r.talk>now?cl((r.lvl-.01)*10,0,1):0;if(s.atk!==r.la){if(r.la!=null&&s.atk!=null)r.c.st.atk=.35;r.la=s.atk}
+  // cycle de marche Minecraft : limbSwing avance proportionnellement à la distance parcourue
+  {const rv=r.van||(r.van={swing:0,amount:0});if(!r.lp)r.lp=g.position.clone();else{const mv=r.lp.distanceTo(g.position);r.lp.copy(g.position);
+   rv.amount+=(Math.min(1,mv*MCPhys.MC.LIMB_SWING_SCALE)-rv.amount)*MCPhys.MC.LIMB_SWING_SMOOTHING;rv.swing+=rv.amount}anim(r.c,dt,tm,rv)}if(s.hy!=null&&!s.dd)lookHead(r.c,s.hy,s.hp,g.rotation.y)}
  if(mode==='play'&&now-sendT>50){sendT=now;send({t:'p',s:{x:me.pos.x,y:me.pos.y,z:me.pos.z,ry:me.ry,sp:st.sp,sn:st.sn,si:st.si,air:st.air,vy:me.vy,atk:me.atkc,use:st.use>0?1:0,fy:st.fly,gl:st.gl,el:me.c.wing,hy:yaw+PI,hp:pit,pg:myPing,dd:dead?1:0}})}
  if(brushing&&lastE&&now-lastBr>70){lastBr=now;const g=pick(lastE).g;if(g)send({t:'op',o:{x:g.p.x,z:g.p.z,r:brush.r,k:tool,s:brush.s,y:flatY,m:brush.m}})}
  gUpd();if(build&&selId&&OB[selId]){bh.visible=true;bh.setFromObject(OB[selId].g)}else bh.visible=false;
- // caméra
- if(mode==='play'){me.eye=lp(me.eye,dead?.45:st.si?1.0:st.sn?1.2:1.55,1-Math.exp(-dt*(dead?3:10)));const tg=me.pos.clone();tg.y+=me.eye;if(dead)yaw+=dt*.12;const d=cfg.dist+(dead?Math.min(deadT,3)*.8:0),cp=Math.cos(pit);
-  if(fp&&!dead){cam.position.copy(tg);cam.position.y+=.12;cam.lookAt(cam.position.x-Math.sin(yaw)*cp,cam.position.y-Math.sin(pit),cam.position.z-Math.cos(yaw)*cp)}else{cam.position.set(tg.x+Math.sin(yaw)*cp*d,tg.y+Math.sin(pit)*d,tg.z+Math.cos(yaw)*cp*d);cam.position.y=Math.max(cam.position.y,T.get(cam.position.x,cam.position.z)+.3);cam.lookAt(tg);
+ // caméra (Minecraft : hauteur d'œil lissée, balancement, inclinaison de dégâts)
+ if(mode==='play'){mc.interpolateEyeHeight();                      // lissage ×0,5 par image (ActiveRenderInfo)
+  const tg=new THREE.Vector3(me.pos.x,me.pos.y+(SIT?1.0:mc.eyeHeight),me.pos.z);if(dead)yaw+=dt*.12;const d=cfg.dist+(dead?Math.min(deadT,3)*.8:0),cp=Math.cos(pit);
+  if(fp&&!dead){cam.position.copy(tg);cam.lookAt(cam.position.x-Math.sin(yaw)*cp,cam.position.y-Math.sin(pit),cam.position.z-Math.cos(yaw)*cp);
+   if(cfg.bob){const b=mc.bobView(alpha);cam.translateX(b.x);cam.translateY(b.y);cam.rotateZ(b.roll);cam.rotateX(b.pitch)}
+   const ht=mc.hurtTilt(alpha);if(ht.f>0){cam.rotateY(-ht.f2);cam.rotateZ(-ht.f*14*Math.PI/180);cam.rotateY(ht.f2)}
+   if(ht.deathRoll)cam.rotateZ(ht.deathRoll);
+  }else{cam.position.set(tg.x+Math.sin(yaw)*cp*d,tg.y+Math.sin(pit)*d,tg.z+Math.cos(yaw)*cp*d);cam.position.y=Math.max(cam.position.y,T.get(cam.position.x,cam.position.z)+.3);cam.lookAt(tg);
   if(zCur>1.02&&!dead){cam.updateMatrixWorld();const pt=zoomTargetPt(),a=cl((zCur-1)/Math.max(.01,zMax()-1),0,1);if(pt){
    const dir=_zd.copy(pt).sub(cam.position),len=dir.length()||1;dir.divideScalar(len);cam.position.addScaledVector(dir,Math.min(len*.6,d*a*.3));cam.position.y=Math.max(cam.position.y,T.get(cam.position.x,cam.position.z)+.3);
    cam.lookAt(_za.copy(tg).lerp(pt,a))}}}}
@@ -1602,6 +1797,8 @@ function frame(now){requestAnimationFrame(frame);const dt=Math.min(.05,(now-last
  zhud.classList.toggle('on',zOn);if(zOn)zhud.textContent='🔍 zoom ×'+zCur.toFixed(1)+(fp?'':' — sur le curseur');
  if(zOn&&!fp){const L=!!document.pointerLockElement;ztg.style.display='block';ztg.style.left=(L?innerWidth/2:mx)+'px';ztg.style.top=(L?innerHeight/2:my)+'px'}else ztg.style.display='none';
  me.c.g.visible=!(mode==='play'&&fp&&!dead);sun.target.position.copy(me.pos);env();
+ if(dt>.0005)fpsS=fpsS+(1/dt-fpsS)*.08;
+ if(dbgOn&&now-dbgT>120){dbgT=now;updDbg(alpha)}
  R.render(sc,cam);
  prevs.forEach(p=>{if(p.el.parentElement.classList.contains('hid'))return;p.ch.g.rotation.y=p.yaw;p.ch.st.sp=0;if(p.el.id==='pv4'){p.ch.mo=vs.mo||0;p.ch.amp=vcfg.amp;p.ch.setML(vcfg.ml)}anim(p.ch,dt,tm);if(p.el.id==='pv2'){if(!p.d)p.yaw=lp(p.yaw,0,.1);const q=p.el.getBoundingClientRect();p.ch.head.rotation.y=cl((mx-q.left-q.width/2)/350,-1,1);p.ch.head.rotation.x=cl((my-q.top-q.height*.22)/350,-.6,.6)}p.r.render(p.s,p.c)})}
 requestAnimationFrame(frame);window.__ready=1;$('#msg').textContent='';

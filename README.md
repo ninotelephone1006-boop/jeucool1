@@ -24,6 +24,72 @@ Le jeu utilise `wss://jeucool1.onrender.com` par défaut. Pour utiliser un autre
 
 Le serveur doit accepter les connexions WebSocket depuis le site qui héberge `index.html`.
 
+## 2 bis. Physique, caméra et animations « Minecraft Java »
+
+Le joueur n'utilise plus une physique approximative : le moteur de `mc/playerphysics.js`
+reproduit **les vrais calculs de Minecraft Java Edition** (déplacements, caméra et
+animation des membres), simulés à **20 ticks par seconde** avec rendu interpolé, comme
+le jeu original.
+
+### Déplacements (valeurs officielles, 1.21.4)
+
+| Situation | Vitesse | Source |
+|---|---|---|
+| Marche | **4,317 m/s** | `0,1 b/t` (attribut `movement_speed` 0,1 × 0,98 × 0,91 × 20) |
+| Sprint | **5,612 m/s** | attribut ×1,3 (`0,13 b/t`) |
+| Accroupi | **1,295 m/s** | facteur d'entrée ×0,3 |
+| Saut | **1,252 2 blocs** (10 ticks en l'air) | impulsion `0,42 b/t`, gravité `0,08`, traînée `0,98` |
+| Vol créatif | 10,89 m/s (21,78 m/s en sprint) | `flying_speed` 0,05 |
+
+Tout le reste est repris à l'identique :
+
+- **gravité** 0,08 b/t² avec traînée d'air 0,98 (vitesse terminale ≈ 78,4 m/s) ;
+- **friction au sol** `slipperiness × 0,91` (0,6 pour la plupart des blocs, 0,98 sur la
+  glace, 0,989 sur la glace bleue, 0,8 sur le bloc de slime) ;
+- **inertie en l'air** 0,91 b/t, **accélération** 0,1 au sol / 0,02 en l'air ;
+- **marche sur les marches** jusqu'à 0,6 bloc (`stepHeight`) ;
+- natation, échelles, lianes, blocs rebondissants, dégâts de chute `⌈distance − 3⌉` ;
+- sprint impossible en arrière, dans l'eau, en volant ou contre un mur.
+
+### Caméra (première personne)
+
+- hauteur des yeux : **1,62 bloc** debout, **1,27** accroupi, **0,4** en nage/eau ;
+- **balancement** synchronisé sur les pas (`limbSwing`, amplitudes 0,5 / 1,0) ;
+- **champ de vision dynamique** : ×1,15 en sprint (70° → 80,5°), comme
+  `getFOVModifier()` ;
+- **inclinaison de la caméra** quand on reçoit un dégât (`hurtCameraEffect`) et
+  « yaw de caméra » de 0,1 rad amorti à 40 % par image.
+
+### Animations des membres
+
+`BipedModel.setRotationAngles` : jambes `cos(limbSwing × 0,6662) × 1,4 × amount`,
+bras `cos(limbSwing × 0,6662 + π) × 2,0 × amount × 0,5`, `limbSwingAmount` amorti
+vers 1 en marchant.
+
+### Touches (comme dans Minecraft)
+
+| Touche | Action |
+|---|---|
+| `Z Q S D` | se déplacer (`Z` deux fois = sprint maintenu) |
+| `Maj` | s'accroupir |
+| `Ctrl` | sprinter |
+| `Espace` | sauter (2× en créatif = voler) |
+| `F3` | écran de débogage (position, vitesse en m/s et b/t, tick, sol, glissance, FOV…) |
+| `F5` | 1ʳᵉ / 3ᵉ personne |
+
+Deux réglages (bouton ⚙) permettent de désactiver le balancement de la caméra et le
+champ de vision dynamique.
+
+> Les objets non vanilla qui changeaient la physique (jetpack, ressort, grappin,
+> potions de vitesse / saut / gravité) ont été supprimés : la physique est 100 % vanilla.
+
+### Vérifier les calculs sans navigateur
+
+```bash
+node tools/test-player-physics.mjs   # 51 assertions sur les constantes et le moteur
+node tools/test-game-smoke.mjs       # exécute index.html dans Node (stubs) et joue
+```
+
 ## 3. GitHub Pages
 Mets `index.html` à la racine du dépôt GitHub et active GitHub Pages.
 
