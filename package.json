@@ -6,15 +6,14 @@
     "start": "node server.js",
     "build:blocks": "node tools/build-mc-blocks.mjs",
     "fetch:mcdata": "bash tools/fetch-mcdata.sh",
-    "test": "node tools/test-blocks.mjs && node tools/test-game-blocks.mjs",
+    "test": "node tools/test-blocks.mjs && node tools/test-game-blocks.mjs && node tools/test-player-physics.mjs && node tools/test-game-smoke.mjs",
     "test:blocks": "node tools/test-blocks.mjs",
     "test:game": "node tools/test-game-blocks.mjs",
-    "preview:blocks": "node tools/preview-blocks.mjs"
+    "preview:blocks": "node tools/preview-blocks.mjs",
+    "test:physics": "node tools/test-player-physics.mjs",
+    "test:smoke": "node tools/test-game-smoke.mjs"
   },
   "dependencies": {
     "ws": "^8.18.0"
-  },
-  "devDependencies": {
-    "pngjs": "^7.0.0"
   }
 }
