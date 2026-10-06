@@ -115,14 +115,14 @@ Les blocs sont rangés par onglets, comme dans Minecraft :
 | 🧰 Fonctionnel | 54 |
 | ✨ Spéciaux | 16 |
 
-Chaque onglet affiche la **texture officielle du bloc** (chargée directement
-depuis `textures/minecraft/blocks/` pour être visible immédiatement dans
-l’inventaire), son nom français, et une infobulle avec ses propriétés.
+Chaque case affiche maintenant une **vignette isométrique 3D** du vrai modèle Minecraft (dessus et côtés visibles), texturée depuis l’atlas officiel : on ne voit plus seulement la face avant du bloc. Les vignettes sont calculées et mises en cache à la demande, puis réutilisées dans l’inventaire, la barre rapide et les onglets créatifs. Le nom français et l’infobulle avec les propriétés restent disponibles.
 
 - **Clic** : la pile part dans l'inventaire.
 - **Clic droit** : le bloc est **équipé directement dans la barre d'accès rapide**
   (touches 1 à 9) et apparaît **en main** en 3D.
 - Le champ 🔎 cherche dans **tous** les blocs (français ou identifiant Minecraft).
+
+L’interface reprend aussi les **textures d’interface Minecraft Java 1.21.4** : fond de l’inventaire de survie, panneau créatif, cases, barre rapide et sélection, ainsi que les boutons normaux / survolés des menus. Les PNG d’interface sont rangés dans `textures/minecraft/gui/` (source indiquée dans `textures/minecraft/gui/SOURCES.md`).
 
 ### Pose dans le monde
 - **Clic droit** pose le bloc sur la grille, exactement à l'endroit visé

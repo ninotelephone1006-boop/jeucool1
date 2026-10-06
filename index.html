@@ -78,6 +78,112 @@ button:disabled{opacity:.45;cursor:not-allowed}
 #dead h1{margin:0;font-size:clamp(34px,8vw,84px);letter-spacing:.18em;color:#ff3b3b;text-shadow:0 0 28px #f00,0 4px 0 #400}
 #dk{font-size:18px;opacity:.85;margin-bottom:10px}
 #dead button{width:260px;font-size:16px;padding:12px}
+/* ======================================================================
+   Interface Minecraft : sprites GUI officiels 1.21.4 + vraie disposition
+   de l’inventaire. Les dimensions suivent la grille native de 18 px.
+   ====================================================================== */
+:root{--mc-button:url("textures/minecraft/gui/sprites/widget/button.png");--mc-button-hover:url("textures/minecraft/gui/sprites/widget/button_highlighted.png");--mc-button-disabled:url("textures/minecraft/gui/sprites/widget/button_disabled.png")}
+button,select{border:3px solid transparent;border-radius:0;background-color:transparent;background-image:none;border-image-source:var(--mc-button);border-image-slice:3 fill;border-image-width:3px;border-image-repeat:stretch;image-rendering:pixelated;text-shadow:2px 2px 0 #3f3f3f;box-shadow:none;transition:color .08s,filter .08s}
+button:hover:not(:disabled),select:hover{background-color:transparent;background-image:none;border-image-source:var(--mc-button-hover);color:#ffff55}
+button.on{background-color:transparent;background-image:none;border-image-source:var(--mc-button-hover);color:#ffff55}
+button:active:not(:disabled){filter:brightness(.82)}
+button:disabled{border-image-source:var(--mc-button-disabled);opacity:1;color:#a0a0a0;cursor:not-allowed}
+button:focus-visible,select:focus-visible{outline:2px solid #fff;outline-offset:2px}
+input[type=text]{border:3px solid transparent;border-radius:0;background-color:#000;background-image:none;border-image-source:url("textures/minecraft/gui/sprites/widget/text_field.png");border-image-slice:3 fill;border-image-width:3px;border-image-repeat:stretch;image-rendering:pixelated;text-shadow:1px 1px #000;color:#fff;box-shadow:none}
+input[type=text]::placeholder{color:#a0a0a0;opacity:1}
+input[type=text]:focus{outline:none;border-image-source:url("textures/minecraft/gui/sprites/widget/text_field_highlighted.png")}
+.slot{border:0;border-radius:0;background:#8b8b8b url("textures/minecraft/gui/sprites/container/slot.png") center/100% 100% no-repeat;box-shadow:none;line-height:normal}
+.slot>.mci{position:absolute;inset:0;padding:11.111%;border-radius:0;object-fit:contain}
+#cg .slot:hover{border:0;background-image:url("textures/minecraft/gui/sprites/container/slot_highlight_front.png"),url("textures/minecraft/gui/sprites/container/slot.png");background-size:100% 100%;background-position:center;background-repeat:no-repeat;filter:brightness(1.12)}
+.slot.sel{border:0;box-shadow:none}
+#hot{z-index:5;left:50%;bottom:10px;transform:translateX(-50%);width:min(455px,calc(100vw - 12px));aspect-ratio:182/22;height:auto;display:flex;align-items:stretch;justify-content:center;gap:0;padding:0;border:0;border-radius:0;background:transparent url("textures/minecraft/gui/sprites/hud/hotbar.png") center/100% 100% no-repeat;backdrop-filter:none;box-shadow:none}
+#hot.hid{transform:translateX(-50%) scale(.96)}
+#hot.inventory-open{visibility:hidden}
+#hot .row{position:absolute;left:.55%;top:4.55%;width:98.9%;height:90.9%;display:flex;gap:0;margin:0}
+#hot .slot{flex:0 0 11.111%;width:11.111%;height:100%;padding:0;background:transparent;border:0;overflow:visible}
+#hot .slot>.mci{padding:11.111%}
+#hot .slot.sel::before,#hg .slot.sel::before{content:"";position:absolute;z-index:0;left:-10%;top:-7.5%;width:120%;height:115%;background:url("textures/minecraft/gui/sprites/hud/hotbar_selection.png") center/100% 100% no-repeat;pointer-events:none}
+#hg .slot.sel::before{left:-16.667%;top:-13.889%;width:133.333%;height:127.778%}
+#hot .slot.sel{z-index:1}
+#hot .slot i,#hg .slot i{z-index:2;right:4%;bottom:0;color:#fff;font-size:4.5cqw;line-height:1;text-shadow:1px 1px #3f3f3f}
+#cur .mci{position:static;width:34px;height:34px;padding:2px}
+
+#inv.p{left:50%;top:50%;right:auto;bottom:auto;margin:0;padding:0;width:min(440px,calc(100vw - 18px));height:auto;max-height:none;overflow:visible;border:0;border-radius:0;background:transparent;backdrop-filter:none;box-shadow:none;z-index:20;transform:translate(-50%,-50%);transition:opacity .18s,transform .18s}
+#inv.p.hid{transform:translate(-50%,-50%) scale(.96)}
+#invWindow{position:relative;isolation:isolate;width:100%;aspect-ratio:176/166;container-type:inline-size;background:url("textures/minecraft/gui/container/inventory.png") left top/145.4545% 154.2169% no-repeat;image-rendering:pixelated;user-select:none}
+.mc-label{position:absolute;z-index:2;color:#404040;font-size:5.11cqw;line-height:1.05;white-space:nowrap;text-shadow:1px 1px #ffffff66;pointer-events:none}
+#invTitle{left:3.98%;top:44.5%}
+#craftTitle{left:55.1%;top:3.5%}
+#craftSlots{position:absolute;inset:0;z-index:2}
+#craftSlots .slot{position:absolute;width:10.227%;height:10.843%;padding:0;background:transparent;border:0}
+#craftSlots .slot:nth-child(1){left:55.1%;top:10.24%}
+#craftSlots .slot:nth-child(2){left:65.34%;top:10.24%}
+#craftSlots .slot:nth-child(3){left:55.1%;top:21.08%}
+#craftSlots .slot:nth-child(4){left:65.34%;top:21.08%}
+#craftSlots .slot.output{left:86.93%;top:16.27%}
+#ig{position:absolute;left:3.977%;top:50%;width:92.046%;height:32.53%;margin:0;padding:0;display:flex;flex-direction:column;gap:0}
+#ig .row,#hg .row,#eg .row,#chg .row{display:flex;flex:0 0 auto;gap:0;margin:0;padding:0}
+#ig .row{width:100%;height:33.333%;flex-basis:33.333%}
+#ig .slot{flex:0 0 11.111%;width:11.111%;height:100%;padding:0;background:transparent;border:0;overflow:visible}
+#eg{position:absolute;left:3.977%;top:4.217%;width:10.227%;height:43.373%;display:flex;flex-direction:column;gap:0}
+#eg .row{width:100%;height:25%;flex-basis:25%}
+#eg .slot{flex:0 0 100%;width:100%;height:100%;padding:0;background:transparent;border:0;overflow:visible}
+#pv2{position:absolute;left:14.77%;top:4.82%;width:28.41%;height:42.17%;display:block;object-fit:fill;background:transparent;image-rendering:auto}
+#hg{position:absolute;left:3.977%;top:85.54%;width:92.046%;height:10.843%;margin:0;padding:0}
+#hg .row{width:100%;height:100%}
+#hg .slot{flex:0 0 11.111%;width:11.111%;height:100%;padding:0;background:transparent;border:0;overflow:visible}
+#ig .slot>.mci,#eg .slot>.mci,#hg .slot>.mci{padding:11.111%;z-index:1}
+#ig .slot i,#eg .slot i,#hg .slot i{z-index:2;right:3%;bottom:0;font-size:4.5cqw;line-height:1;color:#fff;text-shadow:1px 1px #3f3f3f}
+#invMain{display:contents}
+#trashWrap{display:none;min-width:0;flex-direction:column;align-items:center;gap:2px;padding:0;color:#404040;text-shadow:1px 1px #fff;font-size:11px}
+#trashBin{width:44px;height:44px;line-height:40px;background:#8b8b8b url("textures/minecraft/gui/sprites/container/slot.png") center/100% 100% no-repeat;border:0;border-radius:0;font-size:25px}
+#trashBin:hover{background-image:url("textures/minecraft/gui/sprites/container/slot_highlight_front.png"),url("textures/minecraft/gui/sprites/container/slot.png");background-size:100% 100%}
+#invHelp{position:absolute;left:0;top:calc(100% + 8px);width:100%;padding:5px 8px;background:#151515ee;border:2px solid #373737;box-shadow:inset 2px 2px #555,inset -2px -2px #090909;color:#eee;font-size:clamp(10px,2.4vw,12px);line-height:1.35;text-shadow:1px 1px #000;pointer-events:none}
+#chw.mc-chest{position:relative;isolation:isolate;width:100%;aspect-ratio:176/94;margin:0 0 8px;padding:0;overflow:hidden;color:#404040;background:url("textures/minecraft/gui/container/generic_54.png") left top/145.4545% 272.34% no-repeat;image-rendering:pixelated}
+#chw b{position:absolute;left:3.98%;top:2.5%;font-size:5.1cqw;line-height:1;font-weight:400;color:#404040;text-shadow:1px 1px #fff8}
+#chw span{font-size:4cqw;color:#404040}
+#chg{position:absolute;left:3.977%;top:18.085%;width:92.046%;height:57.447%;margin:0;padding:0;display:flex;flex-direction:column;gap:0}
+#chg .row{width:100%;height:33.333%;flex-basis:33.333%}
+#chg .slot{flex:0 0 11.111%;width:11.111%;height:100%;padding:0;background:transparent;border:0;overflow:visible}
+#chg .slot>.mci{padding:11.111%}
+#chg .slot i{z-index:2;right:3%;bottom:0;font-size:4.5cqw;line-height:1;color:#fff;text-shadow:1px 1px #3f3f3f}
+#inv.creative-open{width:min(487.5px,calc(100vw - 18px))}
+#inv.creative-open #invWindow{aspect-ratio:195/136;background-image:url("textures/minecraft/gui/container/creative_inventory/tab_items.png");background-size:131.2821% 188.2353%}
+#inv.creative-open #invTitle,#inv.creative-open #craftTitle,#inv.creative-open #craftSlots,#inv.creative-open #ig,#inv.creative-open #eg,#inv.creative-open #pv2{display:none}
+#inv.creative-open #hg{left:3.59%;top:82.35%;width:83.08%;height:13.235%}
+#inv.creative-open #hg .slot{background:transparent}
+#inv.creative-open #cgw{position:absolute;inset:0;display:block;pointer-events:none}
+#inv.creative-open #cq{position:absolute;left:3.59%;top:-39%;width:92.82%;height:14%;padding:1px 7px;font-size:4.3cqw;pointer-events:auto}
+#inv.creative-open #ct{position:absolute;left:0;top:-24%;width:100%;height:22%;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));gap:0;overflow:hidden;pointer-events:auto}
+#ct button{min-width:0;width:100%;height:100%;min-height:0;margin:0;padding:0 2px;border:2px solid transparent;border-image-source:url("textures/minecraft/gui/sprites/widget/tab.png");border-image-slice:2 fill;border-image-width:2px;border-image-repeat:stretch;background:transparent;color:#404040;text-shadow:1px 1px #fff8;display:flex;align-items:center;justify-content:center;gap:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:2.35cqw;line-height:1}
+#ct button:hover:not(:disabled),#ct button.on{border-image-source:url("textures/minecraft/gui/sprites/widget/tab_selected.png");background:transparent;color:#404040}
+#ct button small{font-size:.8em;opacity:.8}
+#inv.creative-open #cg{position:absolute;left:3.59%;top:12.5%;width:91.3%;height:66.18%;margin:0;padding:0 2.05cqw 0 0;display:grid;grid-template-columns:repeat(9,minmax(0,1fr));grid-auto-rows:20%;align-content:start;gap:0;overflow-y:auto;overflow-x:hidden;pointer-events:auto;scrollbar-width:auto;scrollbar-color:#777 #555}
+#inv.creative-open #cg::-webkit-scrollbar{width:6.15cqw}
+#inv.creative-open #cg::-webkit-scrollbar-thumb{background:#777;border:1px solid #3b3b3b}
+#inv.creative-open #cg::-webkit-scrollbar-track{background:#555}
+#inv.creative-open #cg .slot{width:100%;height:100%;min-width:0;min-height:0;background-color:#8b8b8b}
+#inv.creative-open .creative-note{position:absolute;top:100%;left:0;width:100%;margin-top:8px;padding:4px 6px;color:#eee;background:#151515ee;border:2px solid #373737;font-size:clamp(10px,2.2vw,12px);line-height:1.3;pointer-events:none}
+#inv.creative-open #trashWrap{position:absolute;right:0;top:100%;display:flex;flex-direction:row;align-items:center;gap:5px;margin-top:8px;color:#eee}
+#inv.creative-open #invHelp{top:calc(100% + 70px)}
+#inv.creative-open #trashBin{width:36px;height:36px;line-height:32px}
+@media(max-width:540px){
+ #inv.p{width:min(440px,calc(100vw - 14px))}
+ #inv.creative-open{width:min(487.5px,calc(100vw - 14px))}
+ #inv.creative-open #ct{grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr));height:33%;top:-35%}
+ #inv.creative-open #cq{top:-49%;height:13%}
+ #inv.creative-open #cg{top:12.5%;height:66.18%}
+ #inv.creative-open .creative-note{display:none}
+ #inv.creative-open #trashWrap{top:100%;right:2%}
+ #inv.creative-open #invHelp{top:calc(100% + 46px)}
+}
+#hot.inventory-open{visibility:hidden}
+#hot{container-type:inline-size}
+#inv.p{container-type:inline-size}
+#chw.mc-chest{container-type:inline-size}
+#inv.creative-open .creative-note{width:calc(100% - 64px)}
+@media(max-height:680px){#inv.chest-open{transform:translate(-50%,-50%) scale(.82);transform-origin:center}}
+@media(max-height:540px){#inv.chest-open{transform:translate(-50%,-50%) scale(.68)}}
 </style></head><body>
 <canvas id="c"></canvas>
 <div id="menu" class="p"><h1>COMMUNITY WORLD</h1><input type="text" id="nm" maxlength="16" placeholder="Pseudo" style="width:100%;margin:0 0 8px;cursor:text">
@@ -102,9 +208,30 @@ button:disabled{opacity:.45;cursor:not-allowed}
 <div style="font-size:12px">Touches : ZQSD, Espace, Maj, Ctrl, E, T, A, V (parler), M (micro), C (zoom : maintiens et roule la molette pour régler), F5 (1<sup>re</sup> / 3<sup>e</sup> personne)</div><button class="back">RETOUR</button></div>
 <div id="hot" class="p"></div>
 <div id="chat" class="p"><div id="log"></div><input type="text" id="ci" class="hid" maxlength="200" placeholder="Message ou /build" style="cursor:text"></div>
-<div id="inv" class="p hid"><h3 style="margin:0 0 6px">INVENTAIRE</h3><div id="invMain"><div id="ig"></div><div id="trashWrap"><div id="trashBin" class="slot" role="button" tabindex="0" title="Supprimer l’objet tenu ou sélectionné" aria-label="Corbeille : supprimer l’objet tenu ou sélectionné">🗑️</div><small>Corbeille</small></div></div><div style="display:flex;gap:12px;margin:8px 0"><div><div style="font-size:12px">ÉQUIPEMENT</div><div id="eg"></div></div><canvas id="pv2" width="160" height="200"></canvas></div><div id="hg"></div><div id="chw" style="display:none"><b>📦 Coffre</b> <span style="font-size:11px;opacity:.85">27 emplacements · Maj + clic : transfert rapide</span><div id="chg" style="margin-top:4px"></div></div>
-<div id="cgw" style="display:none"><input id="cq" type="text" placeholder="🔎 Chercher un bloc (planches, pierre, laine, coffre…)" style="width:100%;cursor:text"><div id="ct" class="g" style="margin-top:4px"></div><div id="cg" style="max-height:min(46vh,360px);overflow:auto;display:flex;flex-wrap:wrap;gap:3px;margin-top:4px"></div>
-<div class="hint" style="font-size:11px">🧱 <b>Inventaire créatif</b> : tous les blocs de Minecraft, classés par catégorie · <b>clic</b> = prendre la pile · <b>clic droit</b> = l’équiper directement dans la barre d’accès rapide.</div></div><div style="font-size:11px">Clic : prendre/poser · Clic droit : séparer/poser 1 · Hors des cases : jeter la pile · Dans un coffre : Maj + clic pour tout transférer d’un côté ou de l’autre · En créatif, prends un objet puis clique sur la corbeille pour le supprimer.</div></div>
+<div id="inv" class="p hid" role="dialog" aria-label="Inventaire">
+  <div id="invWindow" class="mc-inventory-window">
+    <div id="invTitle" class="mc-label">Inventaire</div>
+    <div id="craftTitle" class="mc-label">Fabrication</div>
+    <div id="craftSlots" aria-label="Grille de fabrication">
+      <div class="slot" aria-hidden="true"></div><div class="slot" aria-hidden="true"></div>
+      <div class="slot" aria-hidden="true"></div><div class="slot" aria-hidden="true"></div>
+      <div class="slot output" aria-hidden="true"></div>
+    </div>
+    <div id="ig"></div>
+    <div id="eg"></div>
+    <canvas id="pv2" width="100" height="140" aria-label="Aperçu du personnage"></canvas>
+    <div id="hg"></div>
+  </div>
+  <div id="chw" class="mc-chest" style="display:none"><b>📦 Coffre</b> <span>27 emplacements · Maj + clic : transfert rapide</span><div id="chg"></div></div>
+  <div id="trashWrap"><div id="trashBin" class="slot" role="button" tabindex="0" title="Supprimer l’objet tenu ou sélectionné" aria-label="Corbeille : supprimer l’objet tenu ou sélectionné">🗑️</div><small>Corbeille</small></div>
+  <div id="cgw" style="display:none">
+    <input id="cq" type="text" placeholder="🔎 Chercher un bloc (planches, pierre, laine, coffre…)" autocomplete="off">
+    <div id="ct" class="g"></div>
+    <div id="cg"></div>
+    <div class="creative-note">🧱 <b>Inventaire créatif</b> : blocs Minecraft par catégorie · clic = prendre la pile · clic droit = équiper dans la barre rapide.</div>
+  </div>
+  <div id="invHelp">Clic : prendre / poser · Clic droit : prendre ou poser 1 · Hors des cases : jeter · Maj + clic dans un coffre : transfert rapide.</div>
+</div>
 <div id="bt" class="p hid"></div><div id="pp" class="p hid"></div><div id="brk"><i></i></div>
 <div id="cur"></div><div id="tip"></div><div id="xh"></div><div id="zhud"></div><div id="ztg"></div><div id="cmdout"></div>
 <div id="eyes" class="p hid" style="inset:0;margin:auto;width:360px;height:fit-content;text-align:center"><h2>👁 PAUPIÈRES</h2><canvas id="pv3" class="pv" width="260" height="140"></canvas><label><input type="checkbox" id="eon"> Paupières activées (clignement)</label><div class="hint" style="margin:6px 0">Clique ou glisse sur le visage pour sélectionner les pixels de tes yeux. Quand tu clignes, ces pixels prennent la couleur des paupières.</div><canvas id="ezone" width="256" height="256" style="width:256px;height:256px;cursor:crosshair;touch-action:none;border:2px solid #666;border-radius:4px"></canvas><label>Couleur des paupières <input type="color" id="elc"></label><div><button id="epip">🎨 Pipette</button> <button id="eclr">Tout effacer</button></div><div id="epm" class="hint"></div><button class="back">RETOUR</button></div>
@@ -500,7 +627,7 @@ function mcMesh(id, noLight) {
   return g;
 }
 
-/* ---------- icônes 2D (textures officielles + rendu 3D en secours) ---------- */
+/* ---------- icônes 3D Minecraft (maillage + vraies textures du bloc) ---------- */
 const mcIcons = new Map();
 const mcIconSize = 64;
 let mcIconRenderer = null, mcIconScene = null, mcIconCam = null;
@@ -549,18 +676,17 @@ function mcIconTexture(id) {
   }
   return def.main ? `textures/minecraft/blocks/${def.main}.png` : '';
 }
-/** Balise d’icône : on privilégie la texture officielle du bloc (immédiate et fiable),
- *  avec rendu 3D mis en cache en secours si un bloc atypique n’a pas de face exploitable. */
+/** Chaque objet-bloc affiche maintenant son vrai modèle 3D isométrique,
+ *  texturé avec les PNG Minecraft (jamais la seule face avant du cube). */
 function mcIconHTML(id) {
   const name = ((MCI.get(id) || {}).name || id).replace(/"/g, '');
-  const tex = mcIconTexture(id);
-  if (tex) return `<img class="mci" alt="${name}" src="${tex}">`;
   const url = mcIcons.get(id);
-  if (url) return `<img class="mci" alt="${name}" src="${url}">`;
-  return `<img class="mci" data-mc="${id}" alt="${name}">`;
+  return url
+    ? `<img class="mci" data-mc="${id}" data-ok="1" alt="${name}" src="${url}">`
+    : `<img class="mci" data-mc="${id}" alt="${name}">`;
 }
-/* pompe : ne sert plus que de secours ; elle dessine, par petits lots et sans saccader
- * le jeu, les rares icônes encore sans texture directe puis remplit les <img>. */
+/* Rendu progressif des modèles visibles : quelques icônes par image pour ne pas
+ * bloquer le jeu lors de l’ouverture de l’inventaire ou du catalogue créatif. */
 let mcIconFrame = 0;
 function mcIconPaint() {
   if (!mcAtlas.ready) return;
@@ -927,7 +1053,7 @@ let ccat='Tout';const FSET=new Set(FI.map(f=>f[0])),CREATIVE_FOOD=new Set([...FO
 // inventaire créatif : toutes les catégories de blocs Minecraft + les objets du jeu
 CREATIVE_ALLOWED=new Set(['o:jukebox','o:coffre','cd','o:bloc_planche',...CREATIVE_FOOD,...MCI.keys()]),CREATIVE_CATS=MC_CREATIVE_CATS,
 CATS={'Tout':0,'🧱 Blocs':k=>MCI.has(k)||BSET.has(k),'🪑 Objets':k=>k[1]===':'&&!BSET.has(k),'🍎 Nourriture':k=>FOOD.some(f=>f[0]===k),'🧰 Fonctionnels':k=>FSET.has(k),'⚒ Outils':k=>k[1]!==':'&&!FSET.has(k)&&!FOOD.some(f=>f[0]===k)};
-function ctabs(){const cats=gm==='creative'?CREATIVE_CATS:CATS;if(!cats[ccat])ccat='Tout';$('#ct').innerHTML=Object.keys(cats).map(c=>`<button data-c="${c}" class="${c===ccat?'on':''}" style="padding:4px 8px;margin:1px;font-size:12px">${c} <small>${Object.keys(IT).filter(k=>(gm!=='creative'||CREATIVE_ALLOWED.has(k))&&(!cats[c]||cats[c](k))).length}</small></button>`).join('')}
+function ctabs(){const cats=gm==='creative'?CREATIVE_CATS:CATS;if(!cats[ccat])ccat='Tout';$('#ct').innerHTML=Object.keys(cats).map(c=>`<button type="button" data-c="${c}" title="${c}" class="mc-tab ${c===ccat?'on':''}">${c} <small>${Object.keys(IT).filter(k=>(gm!=='creative'||CREATIVE_ALLOWED.has(k))&&(!cats[c]||cats[c](k))).length}</small></button>`).join('')}
 
 if(!localStorage.gmv){localStorage.gmv=1;delete localStorage.gm}
 let fly=0,lastSp=0,gm=localStorage.gm||'survival',fp=0,tOff=0,lme=null,mx=innerWidth/2,my=innerHeight/2;
@@ -1086,13 +1212,13 @@ function chestArr(){const b=chestId&&OB[chestId];const a=b&&b.o.type==='coffre'?
 function chestNorm(a){const o=Array(CHEST_SLOTS).fill(null);if(Array.isArray(a))for(let i=0;i<CHEST_SLOTS;i++)o[i]=a[i]||null;return o}
 function chestLid(b,v){const lid=b.g.children[1];if(!lid)return;const a=-1.78*v,cy=Math.cos(a),sy=Math.sin(a);lid.rotation.x=a;lid.position.set(0,.6+.06*cy-.375*sy,-.375+.06*sy+.375*cy)}
 function chR(){const w=$('#chw'),b=chestId&&OB[chestId];
- if(!b||b.o.type!=='coffre'||!invOpen){w.style.display='none';if(chestId&&!b)chestId=null;return}
- const a=b.o.items=chestNorm(b.o.items);w.style.display='block';if($('#inv').firstElementChild!==w)$('#inv').prepend(w);
+ if(!b||b.o.type!=='coffre'||!invOpen){w.style.display='none';$('#inv').classList.remove('chest-open');if(chestId&&!b)chestId=null;return}
+ const a=b.o.items=chestNorm(b.o.items);w.style.display='block';$('#inv').classList.add('chest-open');if($('#inv').firstElementChild!==w)$('#inv').prepend(w);
  const g=$('#chg');g.innerHTML='';for(let r=0;r<CHEST_SLOTS;r+=9){const row=document.createElement('div');row.className='row';for(let i=r;i<r+9;i++)row.append(slotEl(a,i,0));g.append(row)}}
 function chSend(){const a=chestArr();if(!a||!invOpen)return;const j=JSON.stringify(a);if(j!==chJ){chJ=j;send({t:'upd',id:chestId,p:{items:a}})}}
 function chestOpen(id){const b=OB[id];if(!b||b.o.type!=='coffre'||chestId===id)return;if(chestId)chestClose();
  b.o.items=chestNorm(b.o.items);chestId=id;chJ=JSON.stringify(b.o.items);if(!invOpen)toggleInv();chR();send({t:'upd',id,p:{chOpen:1}});chestSfx(1)}
-function chestClose(){const id=chestId;if(!id)return;chestId=null;chJ='';const w=$('#chw');if(w)w.style.display='none';if(OB[id])send({t:'upd',id,p:{chOpen:0}});chestSfx(0)}
+function chestClose(){const id=chestId;if(!id)return;chestId=null;chJ='';const w=$('#chw');if(w)w.style.display='none';$('#inv').classList.remove('chest-open');if(OB[id])send({t:'upd',id,p:{chOpen:0}});chestSfx(0)}
 function chestSfx(open){try{const c=actx(),t=c.currentTime,v=cl((Number(cfg.vol)||0)*(Number(cfg.sfx)||0),0,1)*.5;if(v<=0)return;
  const n=Math.max(1,Math.floor(c.sampleRate*.3)),buf=c.createBuffer(1,n,c.sampleRate),d=buf.getChannelData(0);
  for(let i=0;i<n;i++){const u=i/n;d[i]=(Math.random()*2-1)*Math.pow(1-u,1.5)*(.55+.45*Math.sin(u*34))}
@@ -1416,8 +1542,8 @@ onkeydown=e=>{const ae=document.activeElement;
 };
 onkeyup=e=>{K[e.key.length===1?e.key.toLowerCase():e.key]=0;if(e.code==='KeyC')K.c=0};onblur=()=>{for(const k in K)K[k]=0};
 function putCursorBack(){if(!cur)return;const item=cloneItem(cur);cur=null;const left=giveItem(item);if(left>0)throwItem({...item,n:left});renderInv()}
-function syncInvMode(){const creative=gm==='creative';$('#cgw').style.display=creative?'block':'none';$('#trashWrap').style.display=creative?'flex':'none';if(invOpen)cg()}
-function toggleInv(){if(invOpen&&cur)putCursorBack();if(invOpen)chestClose();invOpen=!invOpen;hideTip();if(invOpen)unlock();$('#inv').classList.toggle('hid',!invOpen);if(invOpen)syncInvMode();else{$('#cq').blur();renderInv()}}
+function syncInvMode(){const creative=gm==='creative';$('#inv').classList.toggle('creative-open',creative);$('#inv').classList.toggle('survival-open',!creative);$('#cgw').style.display=creative?'block':'none';$('#trashWrap').style.display=creative?'flex':'none';if(invOpen)cg()}
+function toggleInv(){if(invOpen&&cur)putCursorBack();if(invOpen)chestClose();invOpen=!invOpen;hideTip();if(invOpen)unlock();$('#inv').classList.toggle('hid',!invOpen);$('#hot').classList.toggle('inventory-open',invOpen);if(invOpen)syncInvMode();else{$('#cq').blur();renderInv()}}
 function pick(e){document.pointerLockElement?ndc.set(0,0):ndc.set(e.clientX/innerWidth*2-1,-(e.clientY/innerHeight)*2+1);rc.setFromCamera(ndc,cam);rc.far=300;let g=null;const ray=rc.ray,p=new THREE.Vector3();
  for(let t=0;t<300;t+=.5){p.copy(ray.origin).addScaledVector(ray.direction,t);if(p.y<T.get(p.x,p.z)){let a=t-.5,b=t;for(let i=0;i<8;i++){const m=(a+b)/2;p.copy(ray.origin).addScaledVector(ray.direction,m);p.y<T.get(p.x,p.z)?b=m:a=m}g={p:p.clone(),d:b};break}}
  const roots=Object.values(OB).filter(b=>b.o.vis!==0||build).map(b=>b.g),hit=rc.intersectObjects(roots,true)[0];let id=null,h=null;if(hit){let o=hit.object;while(o&&!o.userData.id)o=o.parent;if(o&&(!g||hit.distance<g.d)){id=o.userData.id;h=hit}}return{g,id,h,p:h?h.point:g?.p}}

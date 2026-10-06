@@ -95,8 +95,24 @@ if (!badUv && !badN) console.log('   ✅ coordonnées de texture et normales cor
 /* 3. icônes et vignettes HTML */
 const html1 = api.mcIconHTML('stone');
 if (!/^<img class="mci"/.test(html1)) fail('mcIconHTML ne produit pas de balise image : ' + html1.slice(0, 60));
-if (!/src="(?:data:image\/png|textures\/minecraft\/blocks\/[^"]+\.png)"/.test(api.mcIconHTML('oak_planks'))) fail('icône sans source exploitable');
-console.log('   ✅ vignettes HTML prêtes (inventaire, barre rapide, bibliothèque)');
+const plankIcon = api.mcIconHTML('oak_planks');
+if (!/data-mc="oak_planks"/.test(plankIcon)) fail('l’icône ne pointe pas vers le modèle 3D Minecraft');
+if (/src="textures\/minecraft\/blocks\//.test(plankIcon)) fail('l’icône affiche encore seulement la face avant du bloc');
+if (!/src="data:image\/png/.test(plankIcon) && !/data-mc="oak_planks"/.test(plankIcon)) fail('icône sans source/rendu 3D');
+console.log('   ✅ vignettes isométriques 3D prêtes (inventaire, barre rapide, bibliothèque)');
+
+/* Les boutons et fonds d’inventaire utilisent les vrais sprites Minecraft. */
+const guiFiles = [
+  'textures/minecraft/gui/container/inventory.png',
+  'textures/minecraft/gui/container/creative_inventory/tab_items.png',
+  'textures/minecraft/gui/sprites/widget/button.png',
+  'textures/minecraft/gui/sprites/widget/button_highlighted.png',
+  'textures/minecraft/gui/sprites/hud/hotbar.png',
+  'textures/minecraft/gui/sprites/hud/hotbar_selection.png'
+];
+for (const file of guiFiles) if (!fs.existsSync(path.join(ROOT, file))) fail('texture GUI Minecraft manquante : ' + file);
+if (!html.includes('mc-inventory-window') || !html.includes('sprites/widget/button.png')) fail('styles d’inventaire/boutons Minecraft absents');
+if (!fails) console.log('   ✅ textures GUI officielles présentes (inventaire, boutons, barre rapide)');
 
 /* 4. anciens blocs → blocs Minecraft */
 const legacy = { pierre_lisse: 'stone', 'planche_chêne': 'oak_planks', laine_rouge: 'red_wool', verre_bloc: 'glass', 'tôle': 'iron_block' };
