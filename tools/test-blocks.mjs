@@ -50,17 +50,47 @@ ok(`catégories : ` + CATS.map(([k, l]) => `${l} ${byCat[k] || 0}`).join(' · ')
 
 /* ----------------------------------------------------------------- 2. atlas */
 const atlasFile = path.join(ROOT, 'textures/minecraft/atlas.png');
+let atlasPng = null;
 if (!fs.existsSync(atlasFile)) fail('textures/minecraft/atlas.png manquant');
 else {
-  const png = PNG.sync.read(fs.readFileSync(atlasFile));
-  if (png.width !== A.w || png.height !== A.h) fail(`taille de l’atlas ${png.width}×${png.height} ≠ décrite ${A.w}×${A.h}`);
-  else ok(`atlas ${png.width}×${png.height}, ${Object.keys(A.idx).length} tuiles de ${A.tile}px`);
+  atlasPng = PNG.sync.read(fs.readFileSync(atlasFile));
+  if (atlasPng.width !== A.w || atlasPng.height !== A.h) fail(`taille de l’atlas ${atlasPng.width}×${atlasPng.height} ≠ décrite ${A.w}×${A.h}`);
+  else ok(`atlas ${atlasPng.width}×${atlasPng.height}, ${Object.keys(A.idx).length} tuiles de ${A.tile}px`);
   const maxIdx = Object.keys(A.idx).length;
   if (maxIdx > A.cols * A.rows) fail(`${maxIdx} textures pour ${A.cols * A.rows} tuiles`);
+}
+if (atlasPng) for (const name of ['fire_0', 'soul_fire_0']) {
+  const i = A.idx[name];
+  if (i === undefined) { fail(`texture animée absente de l’atlas : ${name}`); continue; }
+  const ox = (i % A.cols) * A.tile, oy = Math.floor(i / A.cols) * A.tile;
+  let visible = false;
+  for (let y = 0; y < A.tile && !visible; y++) for (let x = 0; x < A.tile; x++) {
+    if (atlasPng.data[((oy + y) * atlasPng.width + ox + x) * 4 + 3] > 7) { visible = true; break; }
+  }
+  if (!visible) fail(`première image animée transparente dans l’atlas : ${name}`);
 }
 const blocksDir = path.join(ROOT, 'textures/minecraft/blocks');
 if (!fs.existsSync(blocksDir)) fail('textures/minecraft/blocks/ manquant (textures officielles)');
 else ok(`${fs.readdirSync(blocksDir).length} textures officielles dans textures/minecraft/blocks/`);
+const iconFile = path.join(ROOT, 'textures/minecraft/block-icons.png');
+if (!fs.existsSync(iconFile)) fail('textures/minecraft/block-icons.png manquant (icônes 3D pré-calculées)');
+else {
+  const icons = PNG.sync.read(fs.readFileSync(iconFile)), size = 64, cols = 16, rows = Math.ceil(B.length / cols);
+  if (icons.width !== cols * size || icons.height !== rows * size) fail(`taille de l’atlas d’icônes ${icons.width}×${icons.height} (attendu ${cols * size}×${rows * size})`);
+  else {
+    const blank = [];
+    for (let i = 0; i < B.length; i++) {
+      const ox = (i % cols) * size, oy = Math.floor(i / cols) * size;
+      let visible = false;
+      for (let y = 0; y < size && !visible; y++) for (let x = 0; x < size; x++) {
+        if (icons.data[((oy + y) * icons.width + ox + x) * 4 + 3] > 7) { visible = true; break; }
+      }
+      if (!visible) blank.push(B[i].id);
+    }
+    if (blank.length) fail(`${blank.length} icônes transparentes : ${blank.slice(0, 6).join(', ')}`);
+    else ok(`atlas d’icônes 3D : ${B.length} vignettes visibles (${cols}×${rows}, tuiles ${size}px)`);
+  }
+}
 
 /* --------------------------------------------------------------- 3. géométrie */
 let tris = 0, heavy = null, emptyBoxes = 0, badUv = 0, badNormal = 0, outOfRange = 0, missingTex = new Set();

@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "start": "node server.js",
-    "build:blocks": "node tools/build-mc-blocks.mjs",
+    "build:blocks": "node tools/build-mc-blocks.mjs && npm run build:icons",
     "fetch:mcdata": "bash tools/fetch-mcdata.sh",
     "test": "node tools/test-blocks.mjs && node tools/test-game-blocks.mjs && node tools/test-player-physics.mjs && node tools/test-game-smoke.mjs",
     "test:blocks": "node tools/test-blocks.mjs",

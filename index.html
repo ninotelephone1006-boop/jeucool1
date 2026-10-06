@@ -25,9 +25,9 @@ button:hover{background:#5870a8}button.on{background:#e8a12e;color:#000}
 #hot{left:50%;bottom:10px;transform:translateX(-50%);display:flex;padding:5px;gap:3px}
 .slot{width:44px;height:44px;background:#222c;border:2px solid #666;border-radius:4px;position:relative;font-size:24px;text-align:center;line-height:40px;cursor:pointer}
 /* icônes de blocs Minecraft (textures officielles de l’inventaire) */
-.mci{width:100%;height:100%;display:block;image-rendering:pixelated;object-fit:contain;pointer-events:none}
+.mci{width:100%;height:100%;display:block;background-image:url("textures/minecraft/block-icons.png");background-repeat:no-repeat;background-size:1600% 6600%;background-origin:content-box;background-clip:content-box;image-rendering:pixelated;pointer-events:none}
 .slot>.mci{position:absolute;inset:0;padding:4px;border-radius:2px}
-#cur .mci{position:static;width:34px;height:34px;padding:2px}
+#cur .mci{display:inline-block;position:static;width:34px;height:34px;padding:2px}
 #cg .slot:hover{border-color:#ffd45e;background:#2c3a58}
 #cg::-webkit-scrollbar{width:10px}#cg::-webkit-scrollbar-thumb{background:#4a5c86;border-radius:6px}#cg::-webkit-scrollbar-track{background:#00000033}
 #bp .card .mci{width:32px;height:32px;margin:0 auto}
@@ -98,7 +98,7 @@ input[type=text]{border:3px solid transparent;border-radius:0;background-color:#
 input[type=text]::placeholder{color:#a0a0a0;opacity:1}
 input[type=text]:focus{outline:none;border-image-source:url("textures/minecraft/gui/sprites/widget/text_field_highlighted.png")}
 .slot{border:0;border-radius:0;background:#8b8b8b url("textures/minecraft/gui/sprites/container/slot.png") center/100% 100% no-repeat;box-shadow:none;line-height:normal}
-.slot>.mci{position:absolute;inset:0;padding:11.111%;border-radius:0;object-fit:contain}
+.slot>.mci{position:absolute;inset:0;padding:11.111%;border-radius:0;z-index:1}
 #cg .slot:hover{border:0;background-image:url("textures/minecraft/gui/sprites/container/slot_highlight_front.png"),url("textures/minecraft/gui/sprites/container/slot.png");background-size:100% 100%;background-position:center;background-repeat:no-repeat;filter:brightness(1.12)}
 .slot.sel{border:0;box-shadow:none}
 #hot{z-index:5;left:50%;bottom:10px;transform:translateX(-50%);width:min(455px,calc(100vw - 12px));aspect-ratio:182/22;height:auto;display:flex;align-items:stretch;justify-content:center;gap:0;padding:0;border:0;border-radius:0;background:transparent url("textures/minecraft/gui/sprites/hud/hotbar.png") center/100% 100% no-repeat;backdrop-filter:none;box-shadow:none}
@@ -635,40 +635,18 @@ function mcMesh(id, noLight) {
   return g;
 }
 
-/* ---------- icônes 3D Minecraft (maillage + vraies textures du bloc) ---------- */
-const mcIcons = new Map();
-const mcIconSize = 64;
-let mcIconRenderer = null, mcIconScene = null, mcIconCam = null;
-function mcIconInit() {
-  if (mcIconRenderer) return;
-  mcIconRenderer = new THREE.WebGLRenderer({ antialias: false, alpha: true, preserveDrawingBuffer: true });
-  mcIconRenderer.setPixelRatio(1);
-  mcIconRenderer.setSize(mcIconSize, mcIconSize, false);
-  mcIconRenderer.outputColorSpace = THREE.SRGBColorSpace;
-  mcIconScene = new THREE.Scene();
-  const w = 1.16;
-  mcIconCam = new THREE.OrthographicCamera(-w, w, w, -w, .01, 20);
-  mcIconCam.position.set(1.55, 1.65, 1.85);
-  mcIconCam.lookAt(0, .42, 0);
-}
-const mcIconMat = [0, 1, 2].map(pix =>
-  new THREE.MeshBasicMaterial({
-    map: mcTex, vertexColors: true, side: THREE.DoubleSide,
-    alphaTest: pix === 1 ? .5 : 0, transparent: pix === 2, depthWrite: pix !== 2
-  }));
-function mcIconRender(id) {
-  if (!mcAtlas.ready || mcIcons.has(id)) return mcIcons.get(id) || null;
-  const def = MCI.get(id);
-  const geo = def && mcGeometry(id);
-  if (!geo || !geo.attributes.position.count) return null;
-  mcIconInit();
-  const mesh = new THREE.Mesh(mcPaintVertexColors(geo), mcIconMat[def.pix || 0]);
-  mcIconScene.add(mesh);
-  mcIconRenderer.render(mcIconScene, mcIconCam);
-  const url = mcIconRenderer.domElement.toDataURL('image/png');
-  mcIconScene.remove(mesh);
-  mcIcons.set(id, url);
-  return url;
+/* ---------- icônes 3D pré-calculées (aucun WebGL supplémentaire) ---------- */
+const MC_ICON_COLS = 16, MC_ICON_SIZE = 64, MC_ICON_ROWS = Math.ceil(MCB.length / MC_ICON_COLS);
+const MC_ICON_INDEX = new Map(MCB.map((b, i) => [b.id, i]));
+const MC_ICON_FILE = 'textures/minecraft/block-icons.png';
+const mcIconImage = typeof Image !== 'undefined' ? new Image() : null;
+if (mcIconImage) { mcIconImage.decoding = 'async'; mcIconImage.src = MC_ICON_FILE; }
+function mcDrawIcon(ctx, id, size = MC_ICON_SIZE) {
+  const i = MC_ICON_INDEX.get(id);
+  if (i === undefined || !mcIconImage || !mcIconImage.complete || !mcIconImage.naturalWidth) return 0;
+  const sx = (i % MC_ICON_COLS) * MC_ICON_SIZE, sy = Math.floor(i / MC_ICON_COLS) * MC_ICON_SIZE;
+  ctx.drawImage(mcIconImage, sx, sy, MC_ICON_SIZE, MC_ICON_SIZE, 0, 0, size, size);
+  return 1;
 }
 function mcFaceTex(face) { return !face ? '' : (typeof face === 'string' ? face : (face.t || '')); }
 function mcIconTexture(id) {
@@ -684,42 +662,17 @@ function mcIconTexture(id) {
   }
   return def.main ? `textures/minecraft/blocks/${def.main}.png` : '';
 }
-/** Chaque objet-bloc affiche maintenant son vrai modèle 3D isométrique,
- *  texturé avec les PNG Minecraft (jamais la seule face avant du cube). */
+/** Les icônes sont une feuille PNG calculée à la génération : elles s'affichent
+ *  immédiatement et ne créent pas un contexte WebGL par-dessus la scène du jeu. */
 function mcIconHTML(id) {
-  const name = ((MCI.get(id) || {}).name || id).replace(/"/g, '');
-  const url = mcIcons.get(id);
-  return url
-    ? `<img class="mci" data-mc="${id}" data-ok="1" alt="${name}" src="${url}">`
-    : `<img class="mci" data-mc="${id}" alt="${name}">`;
+  const index = MC_ICON_INDEX.get(id);
+  if (index === undefined) return '📦';
+  const col = index % MC_ICON_COLS, row = Math.floor(index / MC_ICON_COLS);
+  const x = MC_ICON_COLS > 1 ? (col * 100 / (MC_ICON_COLS - 1)).toFixed(5) : '0';
+  const y = MC_ICON_ROWS > 1 ? (row * 100 / (MC_ICON_ROWS - 1)).toFixed(5) : '0';
+  const name = ((MCI.get(id) || {}).name || id).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  return `<span class="mci" data-mc="${id}" role="img" aria-label="${name}" style="background-position:${x}% ${y}%"></span>`;
 }
-/* Rendu progressif des modèles visibles : quelques icônes par image pour ne pas
- * bloquer le jeu lors de l’ouverture de l’inventaire ou du catalogue créatif. */
-let mcIconFrame = 0;
-function mcIconPaint() {
-  if (!mcAtlas.ready) return;
-  if ((mcIconFrame++ & 7) !== 0) return;                 // une passe toutes les ~8 images
-  const pending = [];
-  for (const img of document.querySelectorAll('img.mci[data-mc]:not([data-ok])')) {
-    const box = img.getBoundingClientRect();
-    if (box.bottom < -80 || box.top > innerHeight + 80 || box.right < -80 || box.left > innerWidth + 80) continue;
-    const id = img.dataset.mc;
-    const url = mcIcons.get(id);
-    if (url) { img.src = url; img.dataset.ok = '1'; continue; }
-    if (!pending.includes(id)) pending.push(id);
-  }
-  if (!pending.length) return;
-  const t0 = performance.now();
-  let n = 0;
-  while (n < pending.length && performance.now() - t0 < 7) mcIconRender(pending[n++]);
-  for (let k = 0; k < n; k++) {
-    const url = mcIcons.get(pending[k]);
-    if (!url) continue;
-    for (const img of document.querySelectorAll(`img.mci[data-mc="${pending[k]}"]`)) { img.src = url; img.dataset.ok = '1'; }
-  }
-}
-/* à l’arrivée de l’atlas, toutes les icônes déjà demandées deviennent possibles */
-(function mcIconLoop() { requestAnimationFrame(mcIconLoop); mcIconPaint(); })();
 
 /* ---------- description d’un bloc pour l’inventaire ---------- */
 function mcCatLabel(b) { return (MC_CATNAME[b.cat] || b.cat).replace(/^\S+\s/, ''); }
@@ -1118,14 +1071,27 @@ function useItem(h,sh){if(typeof sh!=='boolean')sh=!!K.Shift;if(h&&h.id&&OB[h.id
   if(gq){pendSel=1;send({t:'add',o:{type:id,p:gq.p,r:mcPlaceRot(def,gq.n,yaw),s:[1,1,1],tex:null,tx:[1,0,0,0]}});me.c.st.use=.3;dec()}return}
  if(d[5])dec();else if(s.k.startsWith('o:')&&h&&h.p){const gq=gridPlace(h,s.k.slice(2));if(gq){pendSel=1;send({t:'add',o:{type:s.k.slice(2),p:gq.p,r:gq.r,s:[1,1,1],tex:null,tx:[1,0,0,0]}});dec()}}}
 const dropMaps={};
-function dropTexture(item){const def=itemDef(item),key=[item.k,item.name||'',item.n||1].join('|');if(dropMaps[key])return dropMaps[key];const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d');x.clearRect(0,0,64,64);x.fillStyle='#ffffff';x.textAlign='center';x.textBaseline='middle';
+function dropTexture(item) {
+ const def=itemDef(item),key=[item.k,item.name||'',item.n||1].join('|');if(dropMaps[key])return dropMaps[key];
+ const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d');x.clearRect(0,0,64,64);x.fillStyle='#ffffff';x.textAlign='center';x.textBaseline='middle';
+ const count=()=>{if(item.n>1){x.fillStyle='#111';x.font='bold 16px system-ui';x.textAlign='right';x.fillText(String(item.n),62,60)}};
  const mcb=mcDef(item.k);
- if(mcb){ // blocs Minecraft : texture officielle (ou vignette 3D en secours)
+ if(mcb){
   const tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;tex.magFilter=THREE.NearestFilter;
-  const draw=()=>{const u=mcIconTexture(mcb.id)||mcIcons.get(mcb.id)||mcIconRender(mcb.id);if(!u)return 0;const im=new Image();im.onload=()=>{x.clearRect(0,0,64,64);x.imageSmoothingEnabled=false;x.drawImage(im,0,0,64,64);if(item.n>1){x.fillStyle='#111';x.font='bold 16px system-ui';x.textAlign='right';x.fillText(String(item.n),62,60)}tex.needsUpdate=true};im.src=u;return 1};
-  if(!draw()){const w=setInterval(()=>{if(draw())clearInterval(w)},150)}
-  return dropMaps[key]=tex}
- const m=String(def[1]||'📦').match(/src=["']([^"']+)["']/);if(m){const im=new Image();im.onload=()=>{x.clearRect(0,0,64,64);x.drawImage(im,5,5,54,54);if(item.n>1){x.fillStyle='#111';x.font='bold 16px system-ui';x.textAlign='right';x.fillText(String(item.n),62,60)}tex.needsUpdate=true};im.src=m[1]}else{x.font='46px system-ui,"Apple Color Emoji","Segoe UI Emoji"';x.fillText(String(def[1]||'📦'),32,33);if(item.n>1){x.fillStyle='#111';x.font='bold 16px system-ui';x.textAlign='right';x.fillText(String(item.n),62,60)}}const tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;tex.magFilter=THREE.NearestFilter;return dropMaps[key]=tex}
+  const draw=()=>{x.clearRect(0,0,64,64);if(!mcDrawIcon(x,mcb.id,64))return 0;count();tex.needsUpdate=true;return 1};
+  if(!draw()){
+   // Affiche déjà une face officielle pendant le chargement de la feuille 3D.
+   const fallback=new Image(),fallbackUrl=mcIconTexture(mcb.id);
+   fallback.onload=()=>{if(mcDrawIcon(x,mcb.id,64))return;x.clearRect(0,0,64,64);x.imageSmoothingEnabled=false;x.drawImage(fallback,0,0,64,64);count();tex.needsUpdate=true};
+   if(fallbackUrl)fallback.src=fallbackUrl;
+   let attempts=0;const wait=setInterval(()=>{if(draw()||++attempts>200)clearInterval(wait)},150);
+  }
+  return dropMaps[key]=tex;
+ }
+ const m=String(def[1]||'📦').match(/src=["']([^"']+)["']/);
+ if(m){const im=new Image();im.onload=()=>{x.clearRect(0,0,64,64);x.drawImage(im,5,5,54,54);count();tex.needsUpdate=true};im.src=m[1]}
+ else{x.font='46px system-ui,"Apple Color Emoji","Segoe UI Emoji"';x.fillText(String(def[1]||'📦'),32,33);count()}
+ const tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;tex.magFilter=THREE.NearestFilter;return dropMaps[key]=tex}
 function addDrop(raw){if(!raw?.id||!Array.isArray(raw.p)||!raw.item)return;const old=DROPS[raw.id];if(old){moveDrop({id:raw.id,p:raw.p,v:raw.v});return}itemDef(raw.item);const g=new THREE.Group(),shadow=new THREE.Mesh(new THREE.CircleGeometry(.16,16).rotateX(-PI/2),new THREE.MeshBasicMaterial({color:0x111111,transparent:true,opacity:.25,depthWrite:false}));shadow.position.y=-.1;g.add(shadow);const mat=new THREE.MeshBasicMaterial({map:dropTexture(raw.item),transparent:true,side:THREE.DoubleSide,depthWrite:false});for(const a of[0,PI/2]){const card=new THREE.Mesh(new THREE.PlaneGeometry(.34,.34),mat);card.position.y=.16;card.rotation.y=a;g.add(card)}g.renderOrder=5;sc.add(g);const p=new THREE.Vector3(...raw.p),v=new THREE.Vector3(...(raw.v||[0,0,0]));DROPS[raw.id]={id:raw.id,owner:raw.owner,item:cloneItem(raw.item),p,v,netP:p.clone(),netV:v.clone(),g,phase:Math.random()*PI*2,lastSent:0,pickupAt:0,pendingAt:0,pickupAfter:raw.pickupAfter||((raw.born||Date.now())+600),expireAt:+raw.expireAt||((+raw.born||Date.now())+DROP_TTL)};g.position.copy(p)}
 function moveDrop(m){const d=DROPS[m.id];if(!d||!Array.isArray(m.p))return;d.netP.set(+m.p[0]||0,+m.p[1]||0,+m.p[2]||0);if(Array.isArray(m.v))d.netV.set(+m.v[0]||0,+m.v[1]||0,+m.v[2]||0);d.lastNet=performance.now();if(d.netP.distanceTo(d.p)>4)d.p.copy(d.netP)}
 function removeDrop(id){const d=DROPS[id];if(!d)return;sc.remove(d.g);d.g.traverse(q=>{if(q.geometry)q.geometry.dispose();if(q.material&&!Array.isArray(q.material)&&q.material!==dropMaps[d.item.k])q.material.dispose()});delete DROPS[id]}
