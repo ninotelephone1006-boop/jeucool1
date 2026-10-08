@@ -210,7 +210,7 @@ input[type=text]:focus{outline:none;border-image-source:url("textures/minecraft/
 <div class="g"><button id="bCapeDownload" disabled>⬇ Télécharger le PNG</button><button id="bCapeRemove">🗑 Retirer la cape</button><button id="bCapeBack">RETOUR</button></div>
 </div>
 <div id="opts" class="p hid"><h2>PARAMÈTRES</h2><div id="optl"></div><label>Qualité <select id="oq"><option value="0">Basse</option><option value="1">Moyenne</option><option value="2">Haute</option></select></label>
-<div style="font-size:12px">Touches : ZQSD · <b>Maj</b> = s’accroupir · <b>Ctrl</b> (ou Z deux fois) = sprinter · Espace = sauter (2× en créatif = voler) · E, T, A, V (parler), M (micro), C (zoom), <b>F3</b> = écran de débogage, F5 (1<sup>re</sup> / 3<sup>e</sup> personne)</div><button class="back">RETOUR</button></div>
+<div style="font-size:12px">Touches : ZQSD · <b>Maj</b> = s’accroupir · <b>Ctrl</b> (ou Z deux fois) = sprinter · Espace = sauter (2× en créatif = voler) · E, T, A, V (parler), M (micro), C (zoom), <b>F3</b> = écran de débogage, F5 (3<sup>e</sup> pers. dos → 1<sup>re</sup> pers. → 3<sup>e</sup> pers. face)</div><button class="back">RETOUR</button></div>
 <div id="hot" class="p"></div>
 <div id="chat" class="p"><div id="log"></div><input type="text" id="ci" class="hid" maxlength="200" placeholder="Message ou /build" style="cursor:text"></div>
 <div id="inv" class="p hid" role="dialog" aria-label="Inventaire">
@@ -699,6 +699,8 @@ const mcPlaceRot = (def, n, yaw) => window.MCGeom.placeRot(def, n, yaw);
 
 /* ---------- objet en main : le bloc est visible au bout du bras ---------- */
 let mcHeldId = null, mcHeldGroup = null, mcHeldObj = null;
+/* ---------- vue à la première personne (bras + objet tenu, comme Minecraft) ---------- */
+let fpHand = null, fpHeldGroup = null, fpHeldObj = null;
 /** Affiche le bloc sélectionné dans la main. Retourne true si un bloc 3D est affiché. */
 function mcHeldUpdate(item) {
   const id = item ? mcId(item.k) : null;
@@ -713,6 +715,8 @@ function mcHeldUpdate(item) {
   mcHeldId = id;
   if (mcHeldObj) { mcHeldGroup.remove(mcHeldObj); mcHeldObj = null; }
   mcHeldGroup.visible = !!id;
+  if (fpHeldObj) { fpHeldGroup.remove(fpHeldObj); fpHeldObj = null; }
+  if (fpHeldGroup) fpHeldGroup.visible = !!id;
   if (!id) return false;
   const g = mcMesh(id, 1);                        // sans lumière : juste le bloc
   if (!g) return false;
@@ -723,6 +727,16 @@ function mcHeldUpdate(item) {
   mcHeldGroup.add(g);
   g.traverse(m => { m.castShadow = false; m.receiveShadow = false; });
   mcHeldObj = g;
+  if (fpHeldGroup) {                               // même bloc, copie pour la vue 1re personne
+    const g2 = mcMesh(id, 1);
+    if (g2) {
+      g2.scale.setScalar(.62);
+      g2.position.set(0, -(box[0][1] + box[1][1]) * .31, 0);
+      g2.traverse(m => { m.castShadow = false; m.receiveShadow = false; });
+      fpHeldGroup.add(g2);
+      fpHeldObj = g2;
+    }
+  }
   return true;
 }
 
@@ -864,8 +878,34 @@ function rmObj(id){obVer++;const b=OB[id];if(b){og.remove(b.g);delete OB[id];if(
 let ws=null,myId=0,mode='menu',paused=false,build=false,pendSel=0;const RM={};
 const send=o=>ws&&ws.readyState===1&&ws.send(JSON.stringify(o));
 const me={pos:new THREE.Vector3(0,0,0),v:new THREE.Vector3(),ry:0,vy:0,c:mkChar(myCv),atkc:0,eye:1.55};if(myCape)me.c.setCape(myCape);sc.add(me.c.g);
-// La première personne n'ajoute aucun mesh de bras à la caméra.
 sc.add(cam);
+/* ---------- bras de 1re personne (comme ItemInHandRenderer de Minecraft) ----------
+ * Même texture de peau que le bras droit du modèle 3e personne, affiché en bas à
+ * droite de l'écran, avec le balancement de marche et l'animation de coup/minage. */
+(function(){
+  const geo=new THREE.BoxGeometry(4*S,12*S,4*S);uvs(geo,4,12,4,40,16);
+  const mat=new THREE.MeshStandardMaterial({map:me.c.tex,roughness:1});
+  const arm=new THREE.Mesh(geo,mat);arm.position.set(0,-6*S,0);arm.castShadow=false;arm.receiveShadow=false;
+  const g=new THREE.Group();g.name='fpHand';g.add(arm);
+  fpHeldGroup=new THREE.Group();fpHeldGroup.position.set(0,-10.5*S,.35);fpHeldGroup.rotation.set(-.15,.62,.2);g.add(fpHeldGroup);
+  g.position.set(.62,-.55,-.78);g.rotation.set(.3,-.56,.25);g.renderOrder=20;
+  g.visible=false;cam.add(g);fpHand=g;
+})();
+/* anime le bras de 1re personne : balancement de marche + coup/minage/utilisation,
+ * exactement sur le même cycle que le bras droit du modèle 3e personne (c.st.atk / c.st.use). */
+function fpHandUpdate(dt,tm){
+  if(!fpHand)return;
+  const show=mode==='play'&&fp&&!dead;
+  fpHand.visible=show;if(!show)return;
+  const c=me.c,s=c.st,m=c.m;
+  let rx=0,ry=0,rz=0,px=0,py=0,pz=0;
+  if(s.atk>0){const u=1-cl(s.atk/.35,0,1),sn=Math.sin(u*PI),w=cl(sn*3,0,1);
+   rx=-.65*w;ry=.4*sn*(u<.5?1:-1);px=-.07*w;py=-.14*w;pz=.1*w}
+  else if(s.use>0){const w=cl(s.use*8,0,1);rx=Lr(0,-.38+Math.sin(tm*18)*.1,w);py=Lr(0,-.09,w)}
+  const amp=m.amp||0,ph=c.ph||0,bobX=Math.sin(ph)*amp*.028,bobY=Math.abs(Math.cos(ph))*amp*.03;
+  fpHand.position.set(.62+px+bobX,-.55+py-bobY,-.78+pz);
+  fpHand.rotation.set(.3+rx,-.56+ry,.25+rz);
+}
 function mkRemote(p){if(!p||p.id==null)return;if(RM[p.id]){sc.remove(RM[p.id].c.g);delete RM[p.id]}const c=mkChar(defSkin(0));if(p.skin)loadSkin(p.skin).then(x=>c.setSkin(x));if(p.cape)c.setCape(p.cape);c.g.add(tag(p.name));sc.add(c.g);const s=p.s||{x:0,y:0,z:0,ry:0};c.g.position.set(s.x||0,s.y||0,s.z||0);RM[p.id]={c,tg:s,la:s.atk||0,nm:p.name};if(p.eyes){c.eye=p.eyes;eyeDraw(c,0)}}
 function join(){send({t:'join',name:$('#nm').value||'Joueur',skin:localStorage.skin,cape:localStorage.getItem('cape'),eyes:eyeCfg})}
 function startLocal(){ws=localWS();ws.onmessage=onMsg;$('#msg').textContent='Mode local : monde sauvegardé dans ce navigateur (onglets synchronisés).';join()}
@@ -1017,7 +1057,7 @@ CATS={'Tout':0,'🧱 Blocs':k=>MCI.has(k)||BSET.has(k),'🪑 Objets':k=>k[1]==='
 function ctabs(){const cats=gm==='creative'?CREATIVE_CATS:CATS;if(!cats[ccat])ccat='Tout';$('#ct').innerHTML=Object.keys(cats).map(c=>`<button type="button" data-c="${c}" title="${c}" class="mc-tab ${c===ccat?'on':''}">${c} <small>${Object.keys(IT).filter(k=>(gm!=='creative'||CREATIVE_ALLOWED.has(k))&&(!cats[c]||cats[c](k))).length}</small></button>`).join('')}
 
 if(!localStorage.gmv){localStorage.gmv=1;delete localStorage.gm}
-let fly=0,lastSp=0,lastZTap=0,sprintTg=0,dbgOn=0,gm=localStorage.gm||'survival',fp=0,tOff=0,lme=null,mx=innerWidth/2,my=innerHeight/2;
+let fly=0,lastSp=0,lastZTap=0,sprintTg=0,dbgOn=0,gm=localStorage.gm||'survival',fp=0,tpFront=0,tOff=0,lme=null,mx=innerWidth/2,my=innerHeight/2;
 // ---------- zoom (touche C) : FOV en 1re personne, zoom vers le curseur en 3e
 const zMax=()=>cl(+cfg.zoom||4,1.5,12),zLvl=()=>cl(+cfg.zlvl||zMax(),1.2,zMax());
 let zCur=1;const _zv=new THREE.Vector3(),_za=new THREE.Vector3(),_zd=new THREE.Vector3(),zhud=$('#zhud'),ztg=$('#ztg');
@@ -1518,7 +1558,10 @@ onkeydown=e=>{const ae=document.activeElement;
  if(k==='a'){const s=inv[sel];if(s){log('Objet jeté : '+itemDef(s)[0]);dropSelected(1)}}
  if(k>='1'&&k<='9'){sel=k-1;renderInv()}
  if(k===' '&&!e.repeat&&gm==='creative'){const n=performance.now();if(n-lastSp<300){fly=fly?0:1;mc.vel.y=0;me.vy=0}lastSp=n}
- if(k==='F5'){e.preventDefault();fp=!fp;fp?$('#c').requestPointerLock?.():unlock()}
+ if(k==='F5'){e.preventDefault();
+  // cycle Minecraft : 3e personne (dos) -> 1re personne -> 3e personne (face) -> ...
+  if(!fp&&!tpFront){fp=1;tpFront=0}else if(fp){fp=0;tpFront=1}else{fp=0;tpFront=0}
+  fp?$('#c').requestPointerLock?.():unlock()}
  if(build){const O=selId&&OB[selId]?.o,st=e.shiftKey?1:.25;if(k==='Delete'||k==='Backspace'){e.preventDefault();if(gm==='creative')breakObject(selId);else delSel();return}
   if(O){const p=[...O.p];let ch=1;if(k==='ArrowLeft')p[0]-=st;else if(k==='ArrowRight')p[0]+=st;else if(k==='ArrowUp')p[2]-=st;else if(k==='ArrowDown')p[2]+=st;else if(k==='PageUp')p[1]+=st;else if(k==='PageDown')p[1]-=st;else ch=0;if(ch){send({t:'upd',id:selId,p:{p}});e.preventDefault()}}}
 };
@@ -1788,7 +1831,7 @@ function frame(now){requestAnimationFrame(frame);const dt=Math.min(.05,(now-last
    if(cfg.bob){const b=mc.bobView(alpha);cam.translateX(b.x);cam.translateY(b.y);cam.rotateZ(b.roll);cam.rotateX(b.pitch)}
    const ht=mc.hurtTilt(alpha);if(ht.f>0){cam.rotateY(-ht.f2);cam.rotateZ(-ht.f*14*Math.PI/180);cam.rotateY(ht.f2)}
    if(ht.deathRoll)cam.rotateZ(ht.deathRoll);
-  }else{cam.position.set(tg.x+Math.sin(yaw)*cp*d,tg.y+Math.sin(pit)*d,tg.z+Math.cos(yaw)*cp*d);cam.position.y=Math.max(cam.position.y,T.get(cam.position.x,cam.position.z)+.3);cam.lookAt(tg);
+  }else{const fsign=tpFront?-1:1;cam.position.set(tg.x+Math.sin(yaw)*cp*d*fsign,tg.y+Math.sin(pit)*d,tg.z+Math.cos(yaw)*cp*d*fsign);cam.position.y=Math.max(cam.position.y,T.get(cam.position.x,cam.position.z)+.3);cam.lookAt(tg);
   if(zCur>1.02&&!dead){cam.updateMatrixWorld();const pt=zoomTargetPt(),a=cl((zCur-1)/Math.max(.01,zMax()-1),0,1);if(pt){
    const dir=_zd.copy(pt).sub(cam.position),len=dir.length()||1;dir.divideScalar(len);cam.position.addScaledVector(dir,Math.min(len*.6,d*a*.3));cam.position.y=Math.max(cam.position.y,T.get(cam.position.x,cam.position.z)+.3);
    cam.lookAt(_za.copy(tg).lerp(pt,a))}}}}
@@ -1796,7 +1839,7 @@ function frame(now){requestAnimationFrame(frame);const dt=Math.min(.05,(now-last
  const zOn=zCur>1.02&&mode==='play'&&!dead;
  zhud.classList.toggle('on',zOn);if(zOn)zhud.textContent='🔍 zoom ×'+zCur.toFixed(1)+(fp?'':' — sur le curseur');
  if(zOn&&!fp){const L=!!document.pointerLockElement;ztg.style.display='block';ztg.style.left=(L?innerWidth/2:mx)+'px';ztg.style.top=(L?innerHeight/2:my)+'px'}else ztg.style.display='none';
- me.c.g.visible=!(mode==='play'&&fp&&!dead);sun.target.position.copy(me.pos);env();
+ me.c.g.visible=!(mode==='play'&&fp&&!dead);fpHandUpdate(dt,tm);sun.target.position.copy(me.pos);env();
  if(dt>.0005)fpsS=fpsS+(1/dt-fpsS)*.08;
  if(dbgOn&&now-dbgT>120){dbgT=now;updDbg(alpha)}
  R.render(sc,cam);
