@@ -75,7 +75,16 @@ vers 1 en marchant.
 | `Ctrl` | sprinter |
 | `Espace` | sauter (2× en créatif = voler) |
 | `F3` | écran de débogage (position, vitesse en m/s et b/t, tick, sol, glissance, FOV…) |
-| `F5` | 1ʳᵉ / 3ᵉ personne |
+| `F5` | cycle caméra : 3ᵉ personne (dos) → 1ʳᵉ personne → 3ᵉ personne (face), comme Minecraft |
+
+### Bras et objet tenu en 1ʳᵉ personne
+
+En 1ʳᵉ personne, le jeu affiche maintenant le bras du joueur (texture du bras droit
+de la peau, comme `ItemInHandRenderer`) avec l'objet/bloc sélectionné au bout, posé
+devant la caméra. Il suit le même balancement de marche que le modèle du corps et
+se balance (« swing ») exactement sur la même minuterie que l'animation de coup/minage
+du corps en 3ᵉ personne (`c.st.atk`, 0,35 s), plus une légère montée lors de
+l'utilisation (boire une potion, manger, bloquer…).
 
 Deux réglages (bouton ⚙) permettent de désactiver le balancement de la caméra et le
 champ de vision dynamique.
